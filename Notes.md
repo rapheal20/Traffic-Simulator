@@ -259,15 +259,15 @@ Recalculate route with Dijkstra
 ## Task TODO
 
 1. Project Setup
-    Set up Python project
+    <!-- Set up Python project -->
     Install libraries
-    Create project structure
+    <!-- Create project structure -->
     Create main simulation loop
     Define simulation timestep
 2. Core Data Structures
     <!-- Design Car -->
-    Design Road
-    Design Node
+    <!-- Design Road -->
+    <!-- Design Node -->
     Design TrafficLight
     Design Simulation
     Design road network structure
@@ -275,9 +275,9 @@ Recalculate route with Dijkstra
 3. Road Network
     Create nodes/intersections
     Create roads
-    Add road properties
+    <!-- Add road properties -->
     Connect roads to nodes
-    Implement lane structure
+    <!-- Implement lane structure -->
     Build/test sample road network
 4. Car System
     <!-- Implement car properties -->
@@ -286,24 +286,24 @@ Recalculate route with Dijkstra
     Implement route/destination data
     Implement car priority
 5. Basic Car Physics
-    Implement acceleration
+    <!-- Implement acceleration -->
     Implement braking
-    Implement speed updates
-    Implement position updates
-    Implement speed limits
-    Implement vehicle limits
+    <!-- Implement speed updates -->
+    <!-- Implement position updates -->
+    <!-- Implement speed limits -->
+    <!-- Implement vehicle limits -->
 6. Car Following
-    Detect car ahead
-    Calculate gap
-    Calculate relative speed
-    Calculate required acceleration
+    <!-- Detect car ahead -->
+    <!-- Calculate gap -->
+    <!-- Calculate relative speed -->
+    <!-- Calculate required acceleration -->
     Implement reaction time
-    Implement safe following distance
+    <!-- Implement safe following distance -->
     Implement collision prevention
 7. Driver Behaviour
-    Implement aggressive drivers
-    Implement calm drivers
-    Implement nervous drivers
+    <!-- Implement aggressive drivers -->
+    <!-- Implement calm drivers -->
+    <!-- Implement nervous drivers -->
     Implement driver-specific acceleration
     Implement driver-specific gap acceptance
 8. Traffic Lights
