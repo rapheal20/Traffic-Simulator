@@ -236,22 +236,26 @@ class car():
         
 road1 = roads(
                 roadID= 'AA01',
-                roadLength = 500,
-                lanes = 2,
+                cordinates= (0,25),
+                roadLength = 60,
+                lanes = 3,
+                orientation=0,
                 speedLimit = 60,
                 oneWay = True,
                 locationsAvailable = [0, 250, 500],
-                trafficLight = 500,
+                trafficLight = 60,
                 )
 
 road2 = roads(
                 roadID= 'BB01',
-                roadLength = 500,
+                cordinates= (60,0),
+                roadLength = 60,
                 lanes = 2,
+                orientation=1,
                 speedLimit = 60,
                 oneWay = True,
                 locationsAvailable = [0, 250, 500],
-                trafficLight = 500,
+                trafficLight = 50,
                 )
 
 #all operations

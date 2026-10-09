@@ -4,11 +4,15 @@ from ActiveRoads import ActiveRoadsList
 class roads():
 
 
-    def __init__(self, roadID, roadLength, lanes, speedLimit, oneWay, locationsAvailable, trafficLight):
+    def __init__(self, roadID, cordinates, roadLength, lanes, orientation, speedLimit, oneWay, locationsAvailable, trafficLight):
 
+
+        #road orientation 0 means road is horizontal, 1 means road is vertical
         self.road_id = roadID
+        self.cordinates = cordinates #tuple
         self.lenght = roadLength #real
         self.lanes = round(lanes,0) #integer
+        self.orientation = orientation #integer
         self.speed_limit = speedLimit #integer
         self.is_one_way = oneWay #Boolean
         self.locations = locationsAvailable #list (represents spawns and destinations both)

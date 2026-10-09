@@ -260,10 +260,10 @@ Recalculate route with Dijkstra
 
 1. Project Setup
     <!-- Set up Python project -->
-    Install libraries
+    <!-- Install libraries -->
     <!-- Create project structure -->
     Create main simulation loop
-    Define simulation timestep
+    <!-- Define simulation timestep -->
 2. Core Data Structures
     <!-- Design Car -->
     <!-- Design Road -->
@@ -389,8 +389,8 @@ Recalculate route with Dijkstra
     Track bottlenecks
     Generate graphs
 20. Visualization
-    Render roads
-    Render lanes
+    <!-- Render roads -->
+    <!-- Render lanes -->
     Render intersections
     Render cars
     Render traffic lights
