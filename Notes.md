@@ -282,12 +282,12 @@ Recalculate route with Dijkstra
 4. Car System
     <!-- Implement car properties -->
     <!-- Implement driver properties -->
-    Implement vehicle properties
+    <!-- Implement vehicle properties -->
     Implement route/destination data
     Implement car priority
-5. Basic Car Physics
+<!-- 5. Basic Car Physics -->
     <!-- Implement acceleration -->
-    Implement braking
+    <!-- Implement braking -->
     <!-- Implement speed updates -->
     <!-- Implement position updates -->
     <!-- Implement speed limits -->
@@ -304,8 +304,8 @@ Recalculate route with Dijkstra
     <!-- Implement aggressive drivers -->
     <!-- Implement calm drivers -->
     <!-- Implement nervous drivers -->
-    Implement driver-specific acceleration
-    Implement driver-specific gap acceptance
+    <!-- Implement driver-specific acceleration -->
+    <!-- Implement driver-specific gap acceptance -->
 8. Traffic Lights
     Create traffic-light system
     Implement light cycles

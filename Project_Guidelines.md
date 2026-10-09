@@ -15,7 +15,7 @@ The program will be custamizable and will allow the user to add different number
 The program will provide analytical data about the simulation such as graphs
 
 
-This projects is made by Rapheal & Anael in collaboration
+This projects is made by Rapheal
 
 
 

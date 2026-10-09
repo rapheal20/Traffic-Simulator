@@ -132,42 +132,39 @@ class car():
         aheadSpeed = carAheadData["Speed"]/3.6 #in m/s
         gap = carAheadData["Gap"]
         if  gap < self.safety_margin:
-            #brake
+
+            ''' ###### BRAKE ###### '''
+
+            print("braking")
             if gap <= (0.5 * self.safety_margin):
-                #very small gap so emergency braking
-                targetSpeedMultiplier = round(random.uniform(0.8, 1),3)
+                #very small gap so emergency braking (braking threshold = 85 to 90%)
+                targetSpeedMultiplier = round(random.uniform(0.1, 0.25),3)
             elif gap <= (0.75 * self.safety_margin):
-                #small gap so hard braking
-                targetSpeedMultiplier = round(random.uniform(0.95, 1.05),3)
+                #small gap so hard braking (braking threshold = 55 to 75%)
+                targetSpeedMultiplier = round(random.uniform(0.25, 0.45),3)
             elif gap <= (0.9 * self.safety_margin):
-                #smaller gap then 150% so smaller speed increment 0.9 to 1.0
-                targetSpeedMultiplier = round(random.uniform(0.9, 1.0),3)
+                #not that small gap so normal braking (braking threshold = 25 to 40%)
+                targetSpeedMultiplier = round(random.uniform(0.6, 0.75),3)
+            else: 
+                #ok gap so norvery little braking (braking threshold = 10 to 20%)
+                targetSpeedMultiplier = round(random.uniform(0.8, 0.9),3)
 
-            #this gives the randomized target speed
-            targetSpeed = aheadSpeed * targetSpeedMultiplier
-            #defined in Simulation.py, this is a driver property whch tells how much to accelerate per timeframe
-            acc_contant = driverConstants[self.driving_style]['ACC_CONSTANT']
 
-            currentSpeedSI = self.current_speed/3.6 #in m/s
-            #formula for finding the target speed for the current timeframe
-            frameTargetSpeed = currentSpeedSI + acc_contant*(targetSpeed-currentSpeedSI)
-            #based on the current frame target speed the acceleration required
-            requiredAcceleration = (frameTargetSpeed - currentSpeedSI)/timeframe
+            Updated_Data = self.Acceleration_Working(aheadSpeed,
+                                                    targetSpeedMultiplier,
+                                                    'BRAKING_CONSTANT',
+                                                    self.max_braking
+                                                    )
+            print(gap, self.safety_margin)
+            self.current_speed = Updated_Data['Speed']
+            self.current_acceleration = Updated_Data['Acc']
+            self.X_position += Updated_Data['Distance']
 
-            #checks if the acceleration is more then that the car can handle, if so then the required acceleration is the maximum supported by the car
-            if requiredAcceleration > self.max_acceleration:
-                requiredAcceleration = self.max_acceleration
-
-            #updates the speed, acceleration and position
-            self.current_speed = frameTargetSpeed*3.6 #converted back into KmH
-            self.current_acceleration = requiredAcceleration
-
-            distance_travelled = currentSpeedSI * timeframe + 0.5 * requiredAcceleration * timeframe**2
-            self.X_position += distance_travelled #adds into the previous position
         elif gap > self.safety_margin:
 
+            ''' ###### ACCELERATE ###### '''
 
-            #accelerate
+            print("accelerate")
             if gap >= (1.5 * self.safety_margin):
                 #bigger gap then 150% so greater speed increment 1 to 1.1
                 targetSpeedMultiplier = round(random.uniform(1.0, 1.1),3)
@@ -175,40 +172,68 @@ class car():
                 #bigger gap then 110% so normal speed increment 0.95 to 1.05
                 targetSpeedMultiplier = round(random.uniform(0.95, 1.05),3)
             else:
-                #smaller gap then 150% so smaller speed increment 0.9 to 1.0
+                #smaller gap then 110% so smaller speed increment 0.9 to 1.0
                 targetSpeedMultiplier = round(random.uniform(0.9, 1.0),3)
 
-            #this gives the randomized target speed
-            targetSpeed = aheadSpeed * targetSpeedMultiplier
-            #defined in Simulation.py, this is a driver property whch tells how much to accelerate per timeframe
-            acc_contant = driverConstants[self.driving_style]['ACC_CONSTANT']
-
-            currentSpeedSI = self.current_speed/3.6 #in m/s
-            #formula for finding the target speed for the current timeframe
-            frameTargetSpeed = currentSpeedSI + acc_contant*(targetSpeed-currentSpeedSI)
-            #based on the current frame target speed the acceleration required
-            requiredAcceleration = (frameTargetSpeed - currentSpeedSI)/timeframe
-
-            #checks if the acceleration is more then that the car can handle, if so then the required acceleration is the maximum supported by the car
-            if requiredAcceleration > self.max_acceleration:
-                requiredAcceleration = self.max_acceleration
-
-            #updates the speed, acceleration and position
-            self.current_speed = frameTargetSpeed*3.6 #converted back into KmH
-            self.current_acceleration = requiredAcceleration
-
-            distance_travelled = currentSpeedSI * timeframe + 0.5 * requiredAcceleration * timeframe**2
-            self.X_position += distance_travelled #adds into the previous position
-
+            Updated_Data = self.Acceleration_Working(aheadSpeed,
+                                                        targetSpeedMultiplier,
+                                                        'ACC_CONSTANT',
+                                                        self.max_acceleration
+                                                        )
+            print(gap, self.safety_margin)
+            self.current_speed = Updated_Data['Speed']
+            self.current_acceleration = Updated_Data['Acc']
+            self.X_position += Updated_Data['Distance']
 
         else:
-            #maintain
-            print()
+        
+            ''' ###### MAINTAIN ###### '''
+
+            targetSpeedMultiplier = round(random.uniform(0.98, 1.02),3)
+
+            #uses acceleration constant
+            Updated_Data = self.Acceleration_Working(aheadSpeed,
+                                                        targetSpeedMultiplier,
+                                                        'ACC_CONSTANT',
+                                                        self.max_acceleration
+                                                        )
+            print(gap, self.safety_margin)
+            self.current_speed = Updated_Data['Speed']
+            self.current_acceleration = Updated_Data['Acc']
+            self.X_position += Updated_Data['Distance']
+
+    def Acceleration_Working(self, CarAheadSpeed, SpeedMultiplier, constantStype, operationType):
+        #this gives the randomized target speed
+        targetSpeed = CarAheadSpeed * SpeedMultiplier
+        #defined in Simulation.py, this is a driver property whch tells how much to accelerate per timeframe
+        acc_contant = driverConstants[self.driving_style][constantStype]
+
+        currentSpeedSI = self.current_speed/3.6 #in m/s
+
+        #formula for finding the target speed for the current timeframe
+        frameTargetSpeed = currentSpeedSI + acc_contant*(targetSpeed-currentSpeedSI)
+
+        #based on the current frame target speed the acceleration required
+        requiredAcceleration = (frameTargetSpeed - currentSpeedSI)/timeframe
+
+        #checks if the acceleration is more then that the car can handle, if so then the required acceleration is the maximum supported by the car
+        
+        if requiredAcceleration > operationType:
+            requiredAcceleration = operationType
+
+        #updates the speed, acceleration and position
+        newSpeed = frameTargetSpeed*3.6 #converted back into KmH
+        newAcc = requiredAcceleration
+
+        # calculating distance travelled
+        distance_travelled = currentSpeedSI * timeframe + 0.5 * requiredAcceleration * timeframe**2
+        return {'Speed' : round(newSpeed,3), 
+                'Acc' : round(newAcc,3),
+                'Distance' : round(distance_travelled,3)}
+    
         
 
-
-
-
+        
 road1 = roads(
                 roadID= 'AA01',
                 roadLength = 500,
@@ -229,38 +254,65 @@ road2 = roads(
                 trafficLight = 500,
                 )
 
+#all operations
+car1 = car("A01", "AA01", 20, 0, 40, 0)
+car2 = car("A02", "AA01", 23, 0, 45, 0)    # 3 m gap — decelerate
 
-# car1 = car("A01", 'AA01', 98, 0)
-# car2 = car("A02", 'AA01', 67, 0)
-# car3 = car("B01", 'AA01', 56, 0)
-# car4 = car("B02", 'AA01', 230, 0)
-# car5 = car("B03", 'AA01', 75, 0)
-# car6 = car("B04", 'AA01', 310, 0)
-# car7 = car("B05", 'AA01', 145, 0)
-# car8 = car("B06", 'AA01', 25, 0)
-# car9 = car("B07", 'AA01', 275, 0)
-# car10 = car("B08", 'AA01', 190, 0)
-# car11 = car("B09", 'AA01', 355, 0)
-# car12 = car("B10", 'AA01', 115, 0)
-# car13 = car("B11", 'AA01', 265, 0)
+car3 = car("A03", "AA01", 40, 0, 35, 0)
+car4 = car("A04", "AA01", 48, 0, 34, 0)    # 8 m gap — maintain (if within threshold)
+
+car5 = car("A05", "AA01", 65, 0, 25, 0)
+car6 = car("A06", "AA01", 82, 0, 30, 0)    # 17 m gap — accelerate
+
+car7 = car("A07", "AA01", 100, 0, 55, 0)
+car8 = car("A08", "AA01", 104, 0, 30, 0)  # 4 m gap — decelerate
+
+car9 = car("A09", "AA01", 125, 0, 40, 0)
+car10 = car("A10", "AA01", 135, 0, 39, 0)  # 10 m gap — maintain (if within threshold)
+
+car11 = car("A11", "AA01", 160, 0, 20, 0)
+car12 = car("A12", "AA01", 185, 0, 45, 0)  # 25 m gap — accelerate
+
+car13 = car("A13", "AA01", 210, 0, 50, 0)
+car14 = car("A14", "AA01", 213, 0, 15, 0)  # 3 m gap — decelerate
+
+car15 = car("A15", "AA01", 240, 0, 35, 0)
+car16 = car("A16", "AA01", 252, 0, 35, 0)  # 12 m gap — maintain (if within threshold)
 
 
 
 
-car1 = car("A01", 'AA01', 98, 0, 52, 0)
-car2 = car("A02", 'AA01', 67, 0, 47, 0)
-car3 = car("B01", 'AA01', 56, 0, 43, 0)
-car4 = car("B02", 'AA01', 230, 0, 58, 0)
-car5 = car("B03", 'AA01', 75, 0, 50, 0)
-car6 = car("B04", 'AA01', 25, 0, 38, 0)
-car7 = car("B05", 'AA01', 145, 0, 45, 0)
-car8 = car("B06", 'AA01', 190, 0, 55, 0)
-car9 = car("B07", 'AA01', 275, 0, 42, 0)
-car10 = car("B08", 'AA01', 115, 0, 48, 0)
-car11 = car("B09", 'AA01', 355, 0, 60, 0)
-car12 = car("B10", 'AA01', 310, 0, 35, 0)
-car13 = car("B11", 'AA01', 265, 0, 53, 0)
+# car1 = car("A01", 'AA01', 98, 0, 52, 0)
+# car2 = car("A02", 'AA01', 67, 0, 47, 0)
+# car3 = car("B01", 'AA01', 56, 0, 43, 0)
+# car4 = car("B02", 'AA01', 230, 0, 58, 0)
+# car5 = car("B03", 'AA01', 75, 0, 50, 0)
+# car6 = car("B04", 'AA01', 25, 0, 38, 0)
+# car7 = car("B05", 'AA01', 145, 0, 45, 0)
+# car8 = car("B06", 'AA01', 190, 0, 55, 0)
+# car9 = car("B07", 'AA01', 275, 0, 42, 0)
+# car10 = car("B08", 'AA01', 115, 0, 48, 0)
+# car11 = car("B09", 'AA01', 355, 0, 60, 0)
+# car12 = car("B10", 'AA01', 310, 0, 35, 0)
+# car13 = car("B11", 'AA01', 265, 0, 53, 0)
 # print(ActiveCarsNow)
+
+
+
+#Test Data With Braking and Acc
+# car1 = car("A01", "AA01", 20, 0, 45, 0)
+# car2 = car("A02", "AA01", 22, 0, 40, 0)   # 2 m gap
+# car3 = car("A03", "AA01", 25, 0, 30, 0)   # 3 m gap
+# car4 = car("A04", "AA01", 29, 0, 55, 0)   # 4 m gap
+# car5 = car("A05", "AA01", 34, 0, 25, 0)   # 5 m gap
+# car6 = car("A06", "AA01", 42, 0, 50, 0)   # 8 m gap
+# car7 = car("A07", "AA01", 44, 0, 20, 0)   # 2 m gap
+# car8 = car("A08", "AA01", 46, 0, 60, 0)   # 2 m gap
+# car9 = car("A09", "AA01", 55, 0, 35, 0)   # 9 m gap
+# car10 = car("A10", "AA01", 70, 0, 50, 0)  # 15 m gap
+# car11 = car("A11", "AA01", 72, 0, 15, 0)  # 2 m gap
+# car12 = car("A12", "AA01", 90, 0, 40, 0)  # 18 m gap
+
 
 # # print(ActiveCarsNow[1].car_id)
 road1.activeCarsList()
@@ -271,11 +323,12 @@ road1.activeCarsList()
 
 for i in road1.cars_data[0]:
     print("Car Start")
-    print(i.car_id, i.lane_No, i.X_position, i.current_speed, i.current_acceleration)
-    print(i.carAheadDataFind())
-    print(i.carAccelerate())
-    print(i.car_id, i.lane_No, i.X_position, i.current_speed, i.current_acceleration)
-    
+    print(f"{i.car_id}, {i.lane_No}, position {i.X_position}, speed {i.current_speed}, acc {i.current_acceleration}, driver {i.driving_style}")
+    (i.carAheadDataFind())
+    (i.carAccelerate())
+    print("Car Data New")
+    print(f"{i.car_id}, {i.lane_No}, position {i.X_position}, speed {i.current_speed}, acc {i.current_acceleration}")
+    print()
 
 # for i in road1.cars_data[1]:
 #     print(i.car_id, i.lane_No, i.X_position)
