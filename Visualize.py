@@ -2,15 +2,16 @@ import pygame
 
 pygame.init()
 
-screen = pygame.display.set_mode((1366,768))
+screen = pygame.display.set_mode((1366,1000))
 
 # Conversion: 1m = 5px
 
 
-from car import road1, road2
-from ActiveRoads import ActiveRoadsList
+# from Object_Classes.car import road1, road2, car1
+import ObjectCreations
+from Active_Lists.ActiveRoads import ActiveRoadsList
+from Active_Lists.ActiveCars import ActiveCarsNow
 # Roadpx = (500 * 5, )
-
 
 # CONSTANTS
 SCALE_PER_M = 5
@@ -55,7 +56,7 @@ while running:
             running = False
 
     # makes the screen white
-    screen.fill((255,255,255))
+    screen.fill((25,25,25))
     for roadObj in ActiveRoadsList.values():
         if roadObj.orientation == 0:
             roadX = roadObj.cordinates[0] * SCALE_PER_M
@@ -66,12 +67,19 @@ while running:
             pygame.draw.rect(surface=screen,color=(0,0,0), rect=roadSize)
 
             #road dashes
-            dashStart = roadX + 15
-            for j in range(1, roadObj.lanes + 1): 
+            dashLenght = 3 * SCALE_PER_M
+            dashGap = 6 * SCALE_PER_M
+            DashesNo = int(roadLenght) // (dashLenght+dashGap)
+            DashedDist = dashLenght*DashesNo + dashGap*(DashesNo-1)
+            StartGap = (roadLenght-DashedDist)//2
+            dashStart = roadX + StartGap
+            for j in range(1, roadObj.lanes): 
                 dashY = roadY + (LANE_WIDTH * SCALE_PER_M)*j + DASHES_WIDTH*(j-1)
-                for i in range(0,roadLenght+1,30):
-                    dashStartPos = dashStart + i
-                    pygame.draw.line(screen,(255,255,255), (dashStartPos, dashY), (dashStartPos+15, dashY), DASHES_WIDTH)
+                DashesNo = int(roadLenght) // (dashLenght+dashGap)
+                dashStartPos = dashStart
+                for i in range(0,DashesNo):
+                    pygame.draw.line(screen,(255,255,255), (dashStartPos, dashY), (dashStartPos+dashLenght, dashY), DASHES_WIDTH)
+                    dashStartPos += (dashLenght+dashGap)
 
 
         elif roadObj.orientation == 1:
@@ -82,28 +90,48 @@ while running:
             roadSize = (roadX, roadY, roadWidth, roadLenght)
             pygame.draw.rect(surface=screen,color=(0,0,0), rect=roadSize)
 
-            dashStart = roadY + 15
-            for j in range(1, roadObj.lanes + 1): 
+            dashLenght = 3 * SCALE_PER_M
+            dashGap = 6 * SCALE_PER_M
+            DashesNo = int(roadLenght) // (dashLenght+dashGap)
+            DashedDist = dashLenght*DashesNo + dashGap*(DashesNo-1)
+            StartGap = (roadLenght-DashedDist)//2
+            dashStart = roadY + StartGap
+            for j in range(1, roadObj.lanes): 
                 dashX = roadX + (LANE_WIDTH * SCALE_PER_M)*j + DASHES_WIDTH*(j-1)
-                for i in range(0,roadLenght+1,30):
-                    dashStartPos = dashStart + i
-                    pygame.draw.line(screen,(255,255,255), (dashX, dashStartPos), (dashX, dashStartPos+15), DASHES_WIDTH)
+                DashesNo = int(roadLenght) // (dashLenght+dashGap)
+                dashStartPos = dashStart
+                for i in range(0,DashesNo):
+                    pygame.draw.line(screen,(255,255,255), (dashX, dashStartPos), (dashX, dashStartPos+dashLenght), DASHES_WIDTH)
+                    dashStartPos += (dashLenght+dashGap)
+                    
 
 
+# car1 = car("A01", "AA01", 5, 0, 45, 0) 
 
         
-    # x_end = 40
-    # x_start = 20
+        for carObj in ActiveCarsNow:
+            carRoad = ActiveRoadsList[carObj.current_road ]
+            if carRoad.orientation == 0:
+                carSCLength = carObj.car_length * SCALE_PER_M
+                carX = (carRoad.cordinates[0] * SCALE_PER_M) + (carObj.X_position * SCALE_PER_M) - (carSCLength)
+                carSCWidth = carWidth * SCALE_PER_M
+                carY = (carRoad.cordinates[1] * SCALE_PER_M) + (((LANE_WIDTH * SCALE_PER_M) - carSCWidth)/2) + (DASHES_WIDTH * carObj.lane_No) + (LANE_WIDTH * SCALE_PER_M * carObj.lane_No)
+                 #2st bracket = finds the space on 1 side of the car
+                 #3nd bracket =  finds the space added due to dashes
+                 #4rd bracket = finds the space added due to different lanes
+                pygame.draw.rect(screen, color=(255,0,0), rect=(carX, carY, carSCLength, carSCWidth))
 
-    # while x_end < roadSize[2]:
-    #     
-    #     pygame.draw.line(screen,(255,255,255), (x_start, 220), (x_end, 220), 3)
-    #     x_start = (20 + x_end)
-    #     x_end += 40
-        
-    #1 lane is 60 px
+            elif carRoad.orientation == 1:
+                carSCLength = carObj.car_length * SCALE_PER_M
+                carY = (carRoad.cordinates[1] * SCALE_PER_M) + (carObj.X_position * SCALE_PER_M) - (carSCLength)
+                carSCWidth = carWidth * SCALE_PER_M
+                carX = (carRoad.cordinates[0] * SCALE_PER_M) + (((LANE_WIDTH * SCALE_PER_M) - carSCWidth)/2) + (DASHES_WIDTH * carObj.lane_No) + (LANE_WIDTH * SCALE_PER_M * carObj.lane_No)
+                 #2st bracket = finds the space on 1 side of the car
+                 #3nd bracket =  finds the space added due to dashes
+                 #4rd bracket = finds the space added due to different lanes
+                pygame.draw.rect(screen, color=(255,0,0), rect=(carX, carY, carSCWidth, carSCLength))
 
-    # pygame.draw.rect(screen, color=(255,0,0), rect=(25, 107,100,45))
+    # + (LANE_WIDTH * roadObj.lane_No) 
 
     #updates the display
     pygame.display.flip()
