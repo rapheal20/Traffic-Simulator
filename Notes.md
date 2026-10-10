@@ -297,7 +297,7 @@ Recalculate route with Dijkstra
     <!-- Calculate gap -->
     <!-- Calculate relative speed -->
     <!-- Calculate required acceleration -->
-    Implement reaction time
+    <!-- Implement reaction time -->
     <!-- Implement safe following distance -->
     Implement collision prevention
 7. Driver Behaviour

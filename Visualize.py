@@ -23,30 +23,9 @@ carWidth = 1.8
 carLenght = 4.5
 
 
-# road1 = roads(
-#                 roadID= 'AA01',
-#                 roadLength = 500,
-#                 lanes = 3,
-#                 orientation=0,
-#                 speedLimit = 60,
-#                 oneWay = True,
-#                 locationsAvailable = [0, 250, 500],
-#                 trafficLight = 500,
-#                 )
-
-# road2 = roads(
-#                 roadID= 'BB01',
-#                 roadLength = 500,
-#                 lanes = 2,
-#                 orientation=1,
-#                 speedLimit = 60,
-#                 oneWay = True,
-#                 locationsAvailable = [0, 250, 500],
-#                 trafficLight = 500,
-#                 )
-
-
 running = True
+clock = pygame.time.Clock()
+elapsed = 0
 while running:
 
 
@@ -54,6 +33,10 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+    
+    dt = clock.tick(60) / 1000
+
 
     # makes the screen white
     screen.fill((25,25,25))
@@ -107,8 +90,6 @@ while running:
 
 
 # car1 = car("A01", "AA01", 5, 0, 45, 0) 
-
-        
         for carObj in ActiveCarsNow:
             carRoad = ActiveRoadsList[carObj.current_road ]
             if carRoad.orientation == 0:
@@ -136,4 +117,25 @@ while running:
     #updates the display
     pygame.display.flip()
 
+
+
+
+    elapsed += dt
+    if elapsed >= 1:
+        print("Simulation Updates")
+        for roadObj in ActiveRoadsList.values():
+            roadObj.activeCarsList()
+            for i in range(roadObj.lanes):
+                # print(roadObj.cars_data[i])
+                for carObj in roadObj.cars_data[i]:
+                    # print(carObj)
+                    # print(f"position before {carObj.X_position}")
+                    carObj.carAheadDataFind()
+                    carObj.carAccelerate()
+                    # print(f"position after {carObj.X_position}")
+        elapsed -= 1
+
 pygame.quit()
+
+
+#     (i.carAccelerate())

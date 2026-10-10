@@ -157,7 +157,7 @@ class car():
                                                     'BRAKING_CONSTANT',
                                                     self.max_braking
                                                     )
-            print(gap, self.safety_margin)
+            # print(gap, self.safety_margin)
             self.current_speed = Updated_Data['Speed']
             self.current_acceleration = Updated_Data['Acc']
             self.X_position += Updated_Data['Distance']
@@ -182,7 +182,7 @@ class car():
                                                         'ACC_CONSTANT',
                                                         self.max_acceleration
                                                         )
-            print(gap, self.safety_margin)
+            # print(gap, self.safety_margin)
             self.current_speed = Updated_Data['Speed']
             self.current_acceleration = Updated_Data['Acc']
             self.X_position += Updated_Data['Distance']
@@ -190,7 +190,7 @@ class car():
         else:
         
             ''' ###### MAINTAIN ###### '''
-
+            print("maintain")
             targetSpeedMultiplier = round(random.uniform(0.98, 1.02),3)
 
             #uses acceleration constant
@@ -199,7 +199,7 @@ class car():
                                                         'ACC_CONSTANT',
                                                         self.max_acceleration
                                                         )
-            print(gap, self.safety_margin)
+            # print(gap, self.safety_margin)
             self.current_speed = Updated_Data['Speed']
             self.current_acceleration = Updated_Data['Acc']
             self.X_position += Updated_Data['Distance']

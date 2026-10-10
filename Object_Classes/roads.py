@@ -4,7 +4,7 @@ from Active_Lists.ActiveRoads import ActiveRoadsList
 class roads():
 
 
-    def __init__(self, roadID, cordinates, roadLength, lanes, orientation, speedLimit, oneWay, locationsAvailable, trafficLight):
+    def __init__(self, roadID, cordinates, roadLength, lanes, orientation, speedLimit, oneWay, locationsAvailable, trafficLight, nodes):
 
 
         #road orientation 0 means road is horizontal, 1 means road is vertical
@@ -17,6 +17,8 @@ class roads():
         self.is_one_way = oneWay #Boolean
         self.locations = locationsAvailable #list (represents spawns and destinations both)
         self.is_traffic_light = trafficLight #real
+        self.nodes = nodes
+        #dictionary, {"NO1" : 25} 25 tell node is at 25m into the road
 
 
         self.cars_data = [[] for _ in range(self.lanes)]
