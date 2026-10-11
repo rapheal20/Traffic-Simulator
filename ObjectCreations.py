@@ -9,9 +9,9 @@ from Active_Lists.ActiveRoads import ActiveRoadsList
 
 # # Road IDs, (x, y), length, lanes, orientation
 # # Horizontal roads: length = 60 m, width = 3 lanes
-# road1 = roads("AA01", (0, 0), 100, 3, 0, 60, True, [0, 250, 500], None)
-# road2 = roads("AA02", (0, 71.6), 100, 3, 0, 60, True, [0, 250, 500], None)
-# road3 = roads("AA03", (0, 143.2), 100, 3, 0, 60, True, [0, 250, 500], None)
+road1 = roads("AA01", (0, 0), 100, 3, 0, 60, True, [0, 250, 500], None, None)
+road2 = roads("AA02", (0, 71.6), 100, 3, 0, 60, True, [0, 250, 500], None, None)
+road3 = roads("AA03", (0, 143.2), 100, 3, 0, 60, True, [0, 250, 500], None, None)
 
 # # Vertical roads: length = 60 m, width = 2 lanes
 # road4 = roads("BB01", (25, 11.6), 60, 2, 1, 60, True, [0, 250, 500], None)
@@ -97,52 +97,52 @@ from Active_Lists.ActiveRoads import ActiveRoadsList
 
 import heapq
 
-road1 = roads(
-                roadID= 'AA01',
-                cordinates= (0,25),
-                roadLength = 60,
-                lanes = 2,
-                orientation=0,
-                speedLimit = 60,
-                oneWay = True,
-                locationsAvailable = [{ "X" :0}],
-                trafficLight = 60,
-                nodes= {
-                    "N01": 0,
-                    "N02" : 25,
-                    "N03" : 52.4
-                    }
-                )
+# road1 = roads(
+#                 roadID= 'AA01',
+#                 cordinates= (0,25),
+#                 roadLength = 60,
+#                 lanes = 2,
+#                 orientation=0,
+#                 speedLimit = 60,
+#                 oneWay = True,
+#                 locationsAvailable = [{ "X" :0}],
+#                 trafficLight = 60,
+#                 nodes= {
+#                     "N01": 0,
+#                     "N02" : 25,
+#                     "N03" : 52.4
+#                     }
+#                 )
 
-road2 = roads(
-                roadID= 'BB01',
-                cordinates= (25,32.6),
-                roadLength = 60,
-                lanes = 2,
-                orientation=1,
-                speedLimit = 60,
-                oneWay = True,
-                locationsAvailable = [{ "Z" :60}],
-                trafficLight = 50,
-                nodes={
-                    "N02" : 0,
-                    "N04" : 60}
-                )
+# road2 = roads(
+#                 roadID= 'BB01',
+#                 cordinates= (25,32.6),
+#                 roadLength = 60,
+#                 lanes = 2,
+#                 orientation=1,
+#                 speedLimit = 60,
+#                 oneWay = True,
+#                 locationsAvailable = [{ "Z" :60}],
+#                 trafficLight = 50,
+#                 nodes={
+#                     "N02" : 0,
+#                     "N04" : 60}
+#                 )
 
-road3 = roads(
-                roadID= 'CC01',
-                cordinates= (52.4,32.6),
-                roadLength = 60,
-                lanes = 2,
-                orientation=1,
-                speedLimit = 60,
-                oneWay = True,
-                locationsAvailable = [{ "Y" :60}],
-                trafficLight = 50,
-                nodes={
-                    "N03" : 0,
-                    "N05" : 60}
-                )
+# road3 = roads(
+#                 roadID= 'CC01',
+#                 cordinates= (52.4,32.6),
+#                 roadLength = 60,
+#                 lanes = 2,
+#                 orientation=1,
+#                 speedLimit = 60,
+#                 oneWay = True,
+#                 locationsAvailable = [{ "Y" :60}],
+#                 trafficLight = 50,
+#                 nodes={
+#                     "N03" : 0,
+#                     "N05" : 60}
+#                 )
 
 
 
@@ -232,7 +232,7 @@ def pathFinder(graph, start, destination):
     
     # print(smallest)
 
-pathFinder(graph, "N04", "N05")
+# pathFinder(graph, "N04", "N05")
 
 # def dijkstra(src):
 #     distance = 
