@@ -36,6 +36,9 @@ import random
 from Active_Lists.ActiveCars import ActiveCarsNow
 from Active_Lists.ActiveRoads import ActiveRoadsList
 from Simulation import *
+from heapq import heappush, heapify, heappop
+import heapq
+import sys
 
 
 
@@ -127,7 +130,6 @@ class car():
 
         return {'Speed' : carAheadSpeed, 'Gap': gap}
         #if there is no car ahead of a car it calculates the gap from the end of the road
-
 
     def carAccelerate(self):
         carAheadData = self.carAheadDataFind()
@@ -233,8 +235,51 @@ class car():
                 'Acc' : round(newAcc,3),
                 'Distance' : round(distance_travelled,3)}
     
+    def pathFinder(graph, start, destination):
+        NodeDist = {}
+        inf = sys.maxsize
+        for node in graph.keys():
+            NodeDist[node] = {"cost" : inf, "pred" : ""}
         
+        NodeDist[start]['cost'] = 0
 
+        VisitedNodes = []
+        tempSRC = start
+        steps = len(graph) - 1 #it takes n-1 steps to complete
+        min_heap = []  
+        heappush(min_heap, (0, start))
+        while min_heap:
+            currentCost, currentNode = heappop(min_heap)
+            if currentNode in VisitedNodes:
+                continue #checks if currentNode is already visited, if it is then it skips the iteration
+
+            VisitedNodes.append(currentNode)
+
+            if currentNode == destination:
+                #if the destination is reached, breaks the loop
+                break
+            else:
+                for j in graph[currentNode]:
+                    if j not in VisitedNodes:
+                        roadName = (graph[currentNode][j])
+                        dist = abs(
+                            ActiveRoadsList[roadName].nodes[currentNode]
+                            - ActiveRoadsList[roadName].nodes[j])
+                        #here it subtracts the distance of 2 nodes on the road to get the actual distance
+                        cost = currentCost + dist
+                        if cost < NodeDist[j]['cost']:
+                            NodeDist[j]['cost'] = cost #reassigns when the cost is lower
+                            NodeDist[j]['pred'] = currentNode
+                            heappush(min_heap, (NodeDist[j]['cost'], j)) #thsi creates a tuple type datatype list with the min distances adn their respective nodes
+        path = []
+        foundPred = NodeDist[destination]['pred']
+        while foundPred != start:
+            path.insert(0, foundPred)
+            foundPred = NodeDist[foundPred]['pred']
+        path.insert(0, start)
+        path.append(destination)
+
+        return path
         
 # road1 = roads(
 #                 roadID= 'AA01',

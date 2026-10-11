@@ -1,13 +1,15 @@
 from Object_Classes.roads import roads
 # from roads import roads
+from Active_Lists.ActiveNodes import ActiveNodesList
 import heapq
 
 class nodes():
 
 
-    def __init__(self, map_position, intType, roads, connections):
-        self.postion = map_position
-        self.intersection_type = intType
+    def __init__(self, ID, roads):
+        self.NodeID = ID
+        # self.postion = map_position
+        # self.intersection_type = intType
         # 0 = 1 road merging into another
         # 1 = roundabout
         # self.connecting_roads = roads #dicionary
@@ -24,6 +26,9 @@ class nodes():
         self.roadsConnected = roads #List
         #this tells which roads are connected to each other using this node
         # ['AA01', 'BB01']
+        ActiveNodesList[self.NodeID] = self
+
+
 
 
 
