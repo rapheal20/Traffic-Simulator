@@ -95,7 +95,7 @@ from Active_Lists.ActiveRoads import ActiveRoadsList
 
 # from Object_Classes.nodes import road1,road2
 
-
+import heapq
 
 road1 = roads(
                 roadID= 'AA01',
@@ -140,27 +140,127 @@ road3 = roads(
                 locationsAvailable = [{ "Y" :60}],
                 trafficLight = 50,
                 nodes={
-                    "N02" : 0,
+                    "N03" : 0,
                     "N05" : 60}
                 )
 
+
+
+
+# road4 = roads(
+#                 roadID= 'DD01',
+#                 cordinates= (52.4,32.6),
+#                 roadLength = 60,
+#                 lanes = 2,
+#                 orientation=1,
+#                 speedLimit = 60,
+#                 oneWay = True,
+#                 locationsAvailable = [{ "Y" :60}],
+#                 trafficLight = 50,
+#                 nodes={
+#                     "N03" : 0,
+#                     "N05" : 60}
+#                 )
+
 graph = {
-    "N01" : {"N02" : "AA01", "N03" : "AA01"},
-    "N02" : {"N01" :"AA01", "N04" : "BB01"},
-    "N03" : {"N01" :"AA01", "N05" : "CC01"},
+    "N01" : {"N02" :"AA01", "N03" : "AA01"},
+    "N02" : {"N01" :"AA01", "N04" : "BB01", "N03":'AA01'},
+    "N03" : {"N01" :"AA01", "N05" : "CC01", "N02":'AA01'},
     "N04" : {"N02" :"BB01"},
     "N05" : {"N03" :"CC01"}
 }
+from heapq import heappush, heapify, heappop
 
-
+import sys
 def pathFinder(graph, start, destination):
     NodeDist = {}
+    inf = sys.maxsize
     for node in graph.keys():
-        if node != start:
-            NodeDist[node] = float("inf")
+        NodeDist[node] = {"cost" : inf, "pred" : ""}
+    
+    NodeDist[start]['cost'] = 0
+
+
+    VisitedNodes = []
+    tempSRC = start
+    steps = len(graph) - 1 #it takes n-1 steps to complete
+    min_heap = []  
+    heappush(min_heap, (0, start))
+
+    # for i in range(steps):
+    while min_heap:
+        currentCost, currentNode = heappop(min_heap)
+
+        if currentNode in VisitedNodes:
+            continue #checks if currentNode is already visited, if it is then it skips the iteration
+
+        VisitedNodes.append(currentNode)
+
+        if currentNode == destination:
+            #if the destination is reached, breaks the loop
+            break
         else:
-            NodeDist[node] = 0
-    print(NodeDist)
+            for j in graph[currentNode]:
+                if j not in VisitedNodes:
+                    roadName = (graph[currentNode][j])
+                    dist = abs(
+                        ActiveRoadsList[roadName].nodes[currentNode]
+                        - ActiveRoadsList[roadName].nodes[j])
+                    #here it subtracts the distance of 2 nodes on the road to get the actual distance
+                    cost = currentCost + dist
+                    if cost < NodeDist[j]['cost']:
+                        NodeDist[j]['cost'] = cost #reassigns when the cost is lower
+                        NodeDist[j]['pred'] = currentNode
+                        heappush(min_heap, (NodeDist[j]['cost'], j)) #thsi creates a tuple type datatype list with the min distances adn their respective nodes
 
 
-pathFinder(graph, "N01", "N04")
+
+    # print(NodeDist)
+    path = []
+    foundPred = NodeDist[destination]['pred']
+    while foundPred != start:
+        path.insert(0, foundPred)
+        foundPred = NodeDist[foundPred]['pred']
+    path.insert(0, start)
+    path.append(destination)
+
+    print(path)
+
+
+
+    # smallest = heapq.heappop((NodeDist.values()))
+    
+    # print(smallest)
+
+pathFinder(graph, "N04", "N05")
+
+# def dijkstra(src):
+#     distance = 
+
+
+
+
+
+
+
+'''
+WORKING OF DIJSTRA
+
+
+First we find te adjcent nodes of the starting node (A)
+then find cost of reaching each neighbour
+    cost(B) = cost(A) + cost(B)
+find the min cost neighbour {B,C}
+mark A as visited
+
+
+for B:
+reach the adjcent nodes of B {C,D}
+Cost(C) = Cost(B) + dist(B=>C)
+= 2+3
+
+compare, C direct is less then from B so we dont chenge
+
+then repeat for all
+
+'''
