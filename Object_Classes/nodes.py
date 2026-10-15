@@ -1,6 +1,6 @@
 from Object_Classes.roads import roads
 # from roads import roads
-from Active_Lists.ActiveNodes import ActiveNodesList
+from Active_Lists.ActiveNodes import ActiveNodesSet
 import heapq
 
 class nodes():
@@ -26,7 +26,11 @@ class nodes():
         self.roadsConnected = roads #List
         #this tells which roads are connected to each other using this node
         # ['AA01', 'BB01']
-        ActiveNodesList[self.NodeID] = self
+        # ActiveNodesList[self.NodeID] = self
+        # AllNodes = sorted(ActiveNodesSet)
+
+        
+       
 
 
 

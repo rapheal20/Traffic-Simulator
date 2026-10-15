@@ -39,12 +39,24 @@ from Simulation import *
 from heapq import heappush, heapify, heappop
 import heapq
 import sys
+# from ObjectCreations import graph
+# from ObjectCreations import *
 
+
+graph = {
+    "N01" : {"N02" :"AA01", "N03":"BB01"},
+    "N02" : {"N05" :"BB03", "N07" : "BB03"},
+    "N03" : {"N04" :"AA02", "N05":'AA02'},
+    "N04" : {"N05" :"AA02", "N06":"BB02"},
+    "N05" : {"N07" :"BB03"},
+    "N06" : {"N07" :"AA03"},
+    "N07" : {}
+}
 
 
 class car():
     
-    def __init__(self, carID, roadID, X_pos, laneNO, speed, acc):
+    def __init__(self, carID, roadID, X_pos, laneNO, speed, acc, spawn, destination):
 
         self.car_id = carID
         self.car_length = 4.5
@@ -93,12 +105,12 @@ class car():
         destination_location = random.randint(0, len(AvailableDestinations)-1)
         while spawn_location == destination_location:
             destination_location = random.randint(0, len(AvailableDestinations)-1)
-        self.spawn = AvailableDestinations[spawn_location]
-        self.destination = AvailableDestinations[destination_location]
+        self.spawn = spawn #AvailableDestinations[spawn_location]
+        self.destination = destination #AvailableDestinations[destination_location]
         self.routing_preference = random.randint(0, 1)
         #0: Less Distance
         #1: Less time
-        self.route = []
+        self.route = self.pathFinder(graph, self.spawn, self.destination)
 
 
         ActiveCarsNow.append(self)
@@ -235,7 +247,7 @@ class car():
                 'Acc' : round(newAcc,3),
                 'Distance' : round(distance_travelled,3)}
     
-    def pathFinder(graph, start, destination):
+    def pathFinder(self, graph, start, destination):
         NodeDist = {}
         inf = sys.maxsize
         for node in graph.keys():
@@ -430,3 +442,8 @@ class car():
 #     car1 = car()
 #     # print(car1.max_speed, car1.max_acceleration, car1.max_braking, car1.car_priority,car1.driving_style,car1.reaction_time)
 #     print(vars(car1))
+
+
+
+
+# car("A02", "AA01", 12, 0, 6, 0)
