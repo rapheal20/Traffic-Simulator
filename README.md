@@ -42,7 +42,9 @@ Right now the UI for making the road network is not ready therefore it is recomm
 This file controls all the objects in the simualtions
 
 The roads are made such that there are no overlapping,
+
 *for calculation purposes the lanes are 3.6m, you will need it if you wish to make a new network*
+
 If the nodes on the roads are changed then a dictionary graph needs to be altered, it should be such that when standing at the current node(key of the dictionary) where can we go and which road do we need to take.
 
 
