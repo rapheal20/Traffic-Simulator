@@ -8,6 +8,9 @@ first off heres a snapshot
 
 The simulation is based on real world factors that affect the movement of traffic on roads. Aimed at testing different road networks the project allows user to test how a intersection or a traffic sign might affect the overall flow of traffic on the roads.
 
+## Why build this project
+The idea that the greatest chaos we witness everyday of our lives is in reality a bunch of very complicated calculations really facinates me. Going through with this project i truly realised how awsome out brains are that they do thousands of lines of codes every second. Building this project would aid me with working on cleaning noisy real world like data and from it extract what is needed helping towards my eventual goal of working in the statistical fields of work
+
 ## Overview
 Main idea behind the project is to simulate traffic on a custom road network as real as possible
 
