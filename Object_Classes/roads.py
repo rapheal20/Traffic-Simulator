@@ -1,6 +1,6 @@
 from Active_Lists.ActiveCars import ActiveCarsNow
 from Active_Lists.ActiveRoads import ActiveRoadsList
-from Active_Lists.ActiveNodes import ActiveNodesSet, ActiveNodesDict
+from Active_Lists.ActiveNodes import ActiveNodesDict, ActiveNodesSet
 
 class roads():
 

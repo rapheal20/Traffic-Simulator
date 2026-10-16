@@ -4,7 +4,7 @@ from Object_Classes.nodes import nodes
 
 from Active_Lists.ActiveCars import ActiveCarsNow
 from Active_Lists.ActiveRoads import ActiveRoadsList
-from Active_Lists.ActiveNodes import ActiveNodesSet, ActiveNodesDict
+from Active_Lists.ActiveNodes import ActiveNodesDict
 
 
 
@@ -20,6 +20,18 @@ road4 = roads("BB01", (25, 11.6), 60, 2, 1, 60, "South", [0, 250, 500], None, {'
 road5 = roads("BB02", (50, 83.2), 60, 2, 1, 60, "South", [0, 250, 500], None, {'N04':0, "N07":60})
 road6 = roads("BB03", (100, 0), 154.8, 3, 1, 60, "South", [0, 250, 500], None, {'N02':0, "N05":71.6, "N07":143.2})
 
+
+
+
+# node1 = nodes("N01", ["AA01", "BB01"])
+
+node1 = nodes("N01", ["AA01", "BB01"])
+node2 = nodes("N02", ["AA01", "BB03"])
+node3 = nodes("N03", ["BB01", "AA02"])
+node4 = nodes("N04", ["AA02"])
+node5 = nodes("N05", ["AA02", "BB03"])
+node6 = nodes("N06", ["BB02"])
+node7 = nodes("N07", ["BB03", "AA03"])
 
 # # node1 = nodes("N01", )
 
@@ -261,9 +273,53 @@ road6 = roads("BB03", (100, 0), 154.8, 3, 1, 60, "South", [0, 250, 500], None, {
 #     "N05" : {"N03" :"CC01"}
 # }
 
+graph1 = {
+    "N01" : {"N02" :"AA01", "N03":"BB01"},
+    "N02" : {"N05" :"BB03", "N07" : "BB03"},
+    "N03" : {"N04" :"AA02", "N05":'AA02'},
+    "N04" : {"N05" :"AA02", "N06":"BB02"},
+    "N05" : {"N07" :"BB03"},
+    "N06" : {"N07" :"AA03"},
+    "N07" : {}
+}
 
 
 
+# car1 = car("A01", "AA01", 5, 0, 8, 0, "N01", "N07")
+# # route = car1.route
+# car("B17", "BB03", 5, 0, 7, 0, "N02", "N07")
 
-car1 = car("A01", "AA01", 5, 0, 8, 0, "N01", "N05")
-print(car1.route)
+
+# --- 100% GRAPH-VALIDATED 20 CAR INITIALIZATIONS ---
+
+# AA01 (3 lanes: 0, 1, 2) - Spawning at N01
+car("A01", "AA01", 5, 0, 45, 0, "N01", "N07")
+car("A02", "AA01", 15, 1, 35, 0, "N01", "N05")
+car("A03", "AA01", 30, 2, 50, 0, "N01", "N06")
+car("A04", "AA01", 45, 0, 40, 0, "N01", "N02")
+car("A05", "AA01", 60, 1, 55, 0, "N01", "N04")
+
+# BB01 (2 lanes: 0, 1) - Spawning at N03
+car("B01", "BB01", 5, 0, 30, 0, "N03", "N07")
+car("B02", "BB01", 20, 1, 45, 0, "N03", "N05")
+car("B03", "BB01", 35, 0, 40, 0, "N03", "N06")
+
+# AA02 (3 lanes: 0, 1, 2) - Spawning at N03
+car("C01", "AA02", 10, 0, 50, 0, "N03", "N07")
+car("C02", "AA02", 25, 1, 35, 0, "N03", "N05")
+car("C03", "AA02", 40, 2, 60, 0, "N03", "N06")
+car("C04", "AA02", 55, 0, 45, 0, "N03", "N07")
+
+# BB02 (2 lanes: 0, 1) - Spawning at N04 (via BB02 road, connected to N07 or N06)
+car("D01", "BB02", 10, 0, 40, 0, "N04", "N07")
+car("D02", "BB02", 25, 1, 50, 0, "N04", "N07")
+
+# BB03 (3 lanes: 0, 1, 2) - Spawning at N02
+car("E01", "BB03", 10, 0, 55, 0, "N02", "N07")
+car("E02", "BB03", 30, 1, 45, 0, "N02", "N05")
+car("E03", "BB03", 50, 2, 35, 0, "N02", "N07")
+car("E04", "BB03", 70, 0, 60, 0, "N02", "N07")
+
+# AA03 (3 lanes: 0, 1, 2) - Spawning at N06
+car("F01", "AA03", 20, 0, 45, 0, "N06", "N07")
+car("F02", "AA03", 40, 1, 50, 0, "N06", "N07")

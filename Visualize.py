@@ -120,20 +120,23 @@ while running:
 
 
 
-    elapsed += dt
-    if elapsed >= 1:
-        print("Simulation Updates")
-        for roadObj in ActiveRoadsList.values():
-            roadObj.activeCarsList()
-            for i in range(roadObj.lanes):
-                # print(roadObj.cars_data[i])
-                for carObj in roadObj.cars_data[i]:
-                    # print(carObj)
-                    # print(f"position before {carObj.X_position}")
-                    carObj.carAheadDataFind()
-                    carObj.carAccelerate()
-                    # print(f"position after {carObj.X_position}")
-        elapsed -= 1
+    # elapsed += dt
+    # if elapsed >= 1:
+    print("Simulation Updates")
+    for roadObj in ActiveRoadsList.values():
+        roadObj.activeCarsList()
+        for i in range(roadObj.lanes):
+            # print(roadObj.cars_data[i])
+            for carObj in roadObj.cars_data[i]:
+                # print(carObj)
+                # print(f"position before {carObj.X_position}")
+                
+                carObj.carAheadDataFind()
+                carObj.carAccelerate(dt*0.2)
+                carObj.turn()
+                
+                # print(f"position after {carObj.X_position}")
+        # elapsed -= 1
 
 pygame.quit()
 

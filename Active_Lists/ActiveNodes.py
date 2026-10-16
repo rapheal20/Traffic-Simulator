@@ -1,5 +1,5 @@
+ActiveNodesDict = {}
+
+
 ActiveNodesSet = set()
-
-
-ActiveNodesDict = {} #graph
 
