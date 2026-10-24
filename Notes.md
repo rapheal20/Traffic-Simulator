@@ -258,11 +258,11 @@ Recalculate route with Dijkstra
 
 ## Task TODO
 
-1. Project Setup
+<!-- 1. Project Setup -->
     <!-- Set up Python project -->
     <!-- Install libraries -->
     <!-- Create project structure -->
-    Create main simulation loop
+    <!-- Create main simulation loop -->
     <!-- Define simulation timestep -->
 2. Core Data Structures
     <!-- Design Car -->
@@ -274,9 +274,9 @@ Recalculate route with Dijkstra
     Define relationships between objects
 3. Road Network
     Create nodes/intersections
-    Create roads
+    <!-- Create roads -->
     <!-- Add road properties -->
-    Connect roads to nodes
+    <!-- Connect roads to nodes -->
     <!-- Implement lane structure -->
     Build/test sample road network
 4. Car System
@@ -300,7 +300,7 @@ Recalculate route with Dijkstra
     <!-- Implement reaction time -->
     <!-- Implement safe following distance -->
     Implement collision prevention
-7. Driver Behaviour
+<!-- 7. Driver Behaviour -->
     <!-- Implement aggressive drivers -->
     <!-- Implement calm drivers -->
     <!-- Implement nervous drivers -->
@@ -313,15 +313,15 @@ Recalculate route with Dijkstra
     Calculate stopping/acceleration requirements
     Integrate lights with car behaviour
 9. Road Transitions
-    Detect road endings
-    Determine next road
-    Move cars between roads
+    <!-- Detect road endings -->
+    <!-- Determine next road -->
+    <!-- Move cars between roads -->
     Preserve/update lane
-    Detect destination arrival
+    <!-- Detect destination arrival -->
 10. Pathfinding & Routing
-    Implement graph representation
-    Implement Dijkstra
-    Implement distance-based routing
+    <!-- Implement graph representation -->
+    <!-- Implement Dijkstra -->
+    <!-- Implement distance-based routing -->
     Implement time-based routing
     Implement routing preferences
     Implement route tracking
@@ -351,7 +351,7 @@ Recalculate route with Dijkstra
     Generate random car properties
     Generate destinations
     Spawn replacement cars
-    Despawn completed cars
+    <!-- Despawn completed cars -->
     Implement safe spawning
 15. Congestion System
     Calculate road density
@@ -392,7 +392,7 @@ Recalculate route with Dijkstra
     <!-- Render roads -->
     <!-- Render lanes -->
     Render intersections
-    Render cars
+    <!-- Render cars -->
     Render traffic lights
     Implement camera
     Implement zoom/pan
@@ -435,7 +435,7 @@ Recalculate route with Dijkstra
     Improve visualization
     Fix edge cases
     Final integration testing
-    Documentation
+    <!-- Documentation -->
 
 
 
