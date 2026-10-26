@@ -5,7 +5,7 @@ from Active_Lists.ActiveNodes import ActiveNodesDict, ActiveNodesSet
 class roads():
 
 
-    def __init__(self, roadID, coordinates, roadLength, lanes, speedLimit, direction):
+    def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec):
 
 
         #road orientation 0 means road is horizontal, 1 means road is vertical
@@ -15,8 +15,8 @@ class roads():
         self.lanes = round(lanes,0) #integer
         # self.orientation = orientation #integer
         self.speed_limit = speedLimit #integer
-        # self.is_one_way = oneWay #Boolean
-        self.direction = direction
+        self.oneway = oneway #Boolean
+        self.UnitVector = unitVec
         # self.locations = locationsAvailable #list (represents spawns and destinations both)
         # self.is_traffic_light = trafficLight #real
         # self.nodes = nodes
