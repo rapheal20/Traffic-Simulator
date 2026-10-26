@@ -5,16 +5,17 @@ from collections import Counter
 import osmnx as ox
 import statistics as st
 import numpy as np
+import uuid
 
 pygame.init()
 
-screen = pygame.display.set_mode((1366,1000))
 from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 # Conversion: 1m = 5px
 
 
-# from Object_Classes.car import road1, road2, car1
-import ObjectCreations
+from Object_Classes.roads import roads
+# import ObjectCreations
+
 from Active_Lists.ActiveRoads import ActiveRoadsList
 from Active_Lists.ActiveCars import ActiveCarsNow
 # Roadpx = (500 * 5, )
@@ -23,43 +24,161 @@ from Active_Lists.ActiveCars import ActiveCarsNow
 SCALE_PER_M = 5
 LANE_WIDTH = 3.6 #in meters
 DASHES_WIDTH = 0.15 #in meters
-DASH_LENGHT = 3
-GAP_LENGHT = 3
-# scale = 5
+DASH_length = 3
+GAP_length = 3
+# VScale = scale
+
+#SCREEN CONSTANTS
+SCREEN_HEIGHT = 1000
+SCREEN_WIDTH = 1366
+BG_COLOR = (227, 227, 227)     # Dark gray background
+GRID_COLOR = (182, 182, 182)    #light gray
+CELL_SIZE = 50
+screen = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
+
+
+clock = pygame.time.Clock()
+elapsed = 0
+
+# PANNING
+camera_X = 0
+camera_Y = 0
+is_dragging = False
+last_mouse_pos = (0,0)  
+#camera_X and camera_Y are the anchors of the screen
+#they are used to find out how far adn where the screen is dragged
+#last_mouse_pos keeps the last postion of the mouse to calculaet the change  
+
+#ZOOM
+zoom_scale = 1.0
+MIN_ZOOM = 0.2
+MAX_ZOOM = 5.0
 
 carWidth = 1.8
-carLenght = 4.5
-
+carlength = 4.5
 
 running = True
-# clock = pygame.time.Clock()
-elapsed = 0
+mapSaved = False
+
+# MAP SAVING
+for u, v, data in projectedGraph.edges(data=True):
+
+    # Make sure both ends of the road exist in our screen dictionary
+    if u in screen_nodes and v in screen_nodes:
+        osmid = data.get('osmid')
+        if isinstance(osmid,list):
+            osmid = osmid[0]
+        LaneNo = FinalLaneCounts.get(osmid,1)
+
+        start_pos = screen_nodes[u][0]
+        end_pos = screen_nodes[v][0]
+
+        speedlimit = data.get('maxspeed', False)
+
+        vector1 = np.array(start_pos, dtype=float)
+        vector2 = np.array(end_pos, dtype=float)
+        direction = vector2 - vector1
+        length = round(np.linalg.norm(direction),0)
+        is_oneway = data.get('oneway', False)
+        if not is_oneway:
+            if LaneNo % 2 != 0:
+                LaneNo += 1
+
+        uniqueID = str(uuid.uuid4())
+
+        roads(
+            roadID= uniqueID,
+            coordinates= [vector1,vector2],
+            roadLength= length,
+            lanes= LaneNo,
+            speedLimit= speedlimit,
+            direction= direction
+        )
+
+# print(ActiveRoadsList)
+
+
 while running:
-
-
-    #pygame.event.get() returns all the events happening
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1: #for left mouse button
+                is_dragging = True
+                last_mouse_pos = event.pos
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:
+                is_dragging = False
+        elif event.type == pygame.MOUSEMOTION:
+            if is_dragging:
+                #if the mouse is  dragging it finds he following
+                # change in x
+                # change in y
+                # then it add them into the camera postion
+                #then changes the last_mouse_pos to new mosue, this remvoes the jerk by changing for each move
+                dx = event.pos[0] - last_mouse_pos[0]
+                dy = event.pos[1] - last_mouse_pos[1]
+                camera_X += dx
+                camera_Y += dy
+                last_mouse_pos = event.pos
 
-    
-    # dt = clock.tick(60) / 1000
+        elif event.type == pygame.MOUSEWHEEL:
+            #in an mousewheel action, event.y tells how far and in what direction has he mosue been moved
+            mouse_X, mouse_Y = pygame.mouse.get_pos()
 
+            old_World_X = (mouse_X - camera_X)/zoom_scale 
+            old_World_Y = (mouse_Y - camera_Y)/zoom_scale 
 
-    # makes the screen white
-    screen.fill((25,25,25))
+            zoom_scale += event.y * 0.05
+            scale = zoom_scale
 
+            if scale > MAX_ZOOM:
+                scale = MAX_ZOOM
+            elif scale < MIN_ZOOM:
+                scale = MIN_ZOOM 
+
+            # print(scale)
+
+            new_world_X = (mouse_X - camera_X) / zoom_scale
+            new_world_Y = (mouse_Y - camera_Y) / zoom_scale      
+
+            camera_X += (new_world_X - old_World_X) * zoom_scale
+            camera_Y += (new_world_Y - old_World_Y) * zoom_scale
+
+            #mouse_X is the pixel coordinate of our monitor or screen
+            #camera_X is the offset
+            #the subtraction is for the pan and then division factors in the zoom
+
+    def drawGrid():
+        current_Cell_Size = CELL_SIZE * zoom_scale
+
+        start_X = camera_X % current_Cell_Size
+        start_Y = camera_Y % current_Cell_Size
+        #here if the CELL_SIZE is 40, adn we drga camera to an offset of 42,42
+        # it finds outthe moda dn starts the grid at 2
+
+        screen.fill(BG_COLOR)
+        for x in range(int(start_X), SCREEN_WIDTH, int(current_Cell_Size)):
+            pygame.draw.line(screen, GRID_COLOR, (x,0), (x,SCREEN_HEIGHT))
+
+        for y in range(int(start_Y), SCREEN_HEIGHT, int(current_Cell_Size)):
+            pygame.draw.line(screen, GRID_COLOR, (0,y), (SCREEN_WIDTH,y))
+    cameraOffset = np.array([camera_X, camera_Y], dtype=float)
+
+    drawGrid()
+    # print(VScale)
     # Loop through every edge (road) in the graph
     for u, v, data in projectedGraph.edges(data=True):
+    
         # Make sure both ends of the road exist in our screen dictionary
-        # print(u, v)
-        # print(data)
         if u in screen_nodes and v in screen_nodes:
             osmid = data.get('osmid')
             if isinstance(osmid,list):
                 osmid = osmid[0]
             LaneNo = FinalLaneCounts.get(osmid,1)
 
+    for roadID, roadData in ActiveRoadsList:
+        
 
             #Linear Algebra concept
             start_pos = screen_nodes[u][0]
@@ -69,16 +188,20 @@ while running:
             vector1 = np.array(start_pos, dtype=float)
             vector2 = np.array(end_pos, dtype=float)
 
+            screen1 = (vector1 * scale) + cameraOffset
+            screen2 = (vector2 * scale) + cameraOffset
+
             #vector subtraction so each element is subtracted from its corresponding element
             direction = vector2 - vector1
 
-            # calculates its euclidean lenght, basically the hypotneous of it
-            lenght = np.linalg.norm(direction)
+            # calculates its euclidean length, basically the hypotneous of it
+            length = np.linalg.norm(direction)
+            # print(length)
             dashPixelWidth = max(1, int(DASHES_WIDTH * scale)) #if dashes width less then 1 then default width 1px
             
             # skips very small road segments/ removes garbage values
-            if lenght >= 10: 
-                Unit_Dir = direction/lenght #creates the unit vector
+            if length >= 20: 
+                Unit_Dir = direction/length #creates the unit vector
                 rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
                 normal = rotation_Matrix.dot(Unit_Dir) #does dot multiplication
                 # we need the normal as to draw out the thickness of our roads we need the exact perpendicualr of its direction
@@ -88,10 +211,10 @@ while running:
                 # nodeBuffer = bufferArea * scale
                 halfWidth = roadWidth/2
 
-                #multiplying the UnitVector gives us a new arrow with that lenght
-                trimmedP1 = vector1 + Unit_Dir * roadWidth
-                trimmedP2 = vector2 - Unit_Dir * roadWidth
-                trimmedLenght = np.linalg.norm(trimmedP2-trimmedP1)
+                #multiplying the UnitVector gives us a new arrow with that length
+                trimmedP1 = screen1 + Unit_Dir * roadWidth
+                trimmedP2 = screen2 - Unit_Dir * roadWidth
+                trimmedlength = np.linalg.norm(trimmedP2-trimmedP1)
 
                 # normal is also a unit vector but in perpendicualr direction
                 Corner1 = trimmedP1 + normal * halfWidth
@@ -99,21 +222,18 @@ while running:
                 Corner3 = trimmedP2 - normal * halfWidth
                 Corner4 = trimmedP1 - normal * halfWidth
 
-
                 PolygonCords = [tuple(Corner1), tuple(Corner2), tuple(Corner3), tuple(Corner4)]
 
                 pygame.draw.polygon(surface=screen, color=(60, 60, 60), points=PolygonCords)
 
-
-
-                dashLenght = DASH_LENGHT * SCALE_PER_M
-                dashGap = GAP_LENGHT * SCALE_PER_M
+                dashlength = DASH_length * scale
+                dashGap = GAP_length * scale
             
-                cycleLen = dashLenght + dashGap
-                dashesNo = int(trimmedLenght//cycleLen)
+                cycleLen = dashlength + dashGap
+                dashesNo = int(trimmedlength//cycleLen)
                 if dashesNo > 0:
-                    totalDashedDist = (dashLenght*dashesNo) + (dashGap*(dashesNo-1))
-                    startGap = (trimmedLenght - totalDashedDist)/2
+                    totalDashedDist = (dashlength*dashesNo) + (dashGap*(dashesNo-1))
+                    startGap = (trimmedlength - totalDashedDist)/2
                 else:
                     totalDashedDist = 0
                     startGap = 0
@@ -128,91 +248,14 @@ while running:
                     pixel_offset = offset * scale
 
                     line_Vector1 = trimmedP1 + normal * pixel_offset #gets on the right width of the road
-                    current_pos = trimmedP1 + Unit_Dir * startGap # gets on the right lenght of the road
+                    current_pos = trimmedP1 + Unit_Dir * startGap # gets on the right length of the road
                     for j in range(dashesNo):
-                        dashEnd = current_pos + Unit_Dir * dashLenght
+                        dashEnd = current_pos + Unit_Dir * dashlength
                         pygame.draw.line(screen,(255,255,255), tuple(current_pos), tuple(dashEnd), width=dashPixelWidth)
                         current_pos += Unit_Dir * cycleLen
 
 
-
-
-
-
-                # start_pos = (int(screen_nodes[u][0][0]-bufferArea), int(screen_nodes[u][0][1]-bufferArea))
-                # end_pos = (int(screen_nodes[v][0][0]-bufferArea), int(screen_nodes[v][0][1]-bufferArea))
-                # width = int(LaneNo * LANE_WIDTH)
-
-
-            # roadX = roadObj.cordinates[0] * SCALE_PER_M
-            # roadY = roadObj.cordinates[1] * SCALE_PER_M
-            # roadLenght = roadObj.lenght * SCALE_PER_M
-            # roadWidth = roadObj.lanes * LANE_WIDTH * SCALE_PER_M + (roadObj.lanes - 1) * DASHES_WIDTH
-            # roadSize = (roadX, roadY, roadLenght, roadWidth)
-            # pygame.draw.rect(surface=screen,color=(0,0,0), rect=roadSize)
-
-
-            
-            # Draw the road line (gray color, 2 pixels wide)
-            # pygame.draw.line(screen, (100, 100, 100), start_pos, end_pos, width)
-
-
-
-
-
-
-
-
-
-
-    # for roadObj in ActiveRoadsList.values():
-    #     if roadObj.orientation == 0:
-    #         roadX = roadObj.cordinates[0] * SCALE_PER_M
-    #         roadY = roadObj.cordinates[1] * SCALE_PER_M
-    #         roadLenght = roadObj.lenght * SCALE_PER_M
-    #         roadWidth = roadObj.lanes * LANE_WIDTH * SCALE_PER_M + (roadObj.lanes - 1) * DASHES_WIDTH
-    #         roadSize = (roadX, roadY, roadLenght, roadWidth)
-    #         pygame.draw.rect(surface=screen,color=(0,0,0), rect=roadSize)
-
-    #         #road dashes
-    #         dashLenght = 3 * SCALE_PER_M
-    #         dashGap = 6 * SCALE_PER_M
-    #         DashesNo = int(roadLenght) // (dashLenght+dashGap)
-    #         DashedDist = dashLenght*DashesNo + dashGap*(DashesNo-1)
-    #         StartGap = (roadLenght-DashedDist)//2
-    #         dashStart = roadX + StartGap
-    #         for j in range(1, roadObj.lanes): 
-    #             dashY = roadY + (LANE_WIDTH * SCALE_PER_M)*j + DASHES_WIDTH*(j-1)
-    #             DashesNo = int(roadLenght) // (dashLenght+dashGap)
-    #             dashStartPos = dashStart
-    #             for i in range(0,DashesNo):
-    #                 pygame.draw.line(screen,(255,255,255), (dashStartPos, dashY), (dashStartPos+dashLenght, dashY), DASHES_WIDTH)
-    #                 dashStartPos += (dashLenght+dashGap)
-
-
-    #     elif roadObj.orientation == 1:
-    #         roadX = roadObj.cordinates[0] * SCALE_PER_M
-    #         roadY = roadObj.cordinates[1] * SCALE_PER_M
-    #         roadLenght = roadObj.lenght * SCALE_PER_M 
-    #         roadWidth = (roadObj.lanes * LANE_WIDTH * SCALE_PER_M) + (roadObj.lanes - 1) * DASHES_WIDTH
-    #         roadSize = (roadX, roadY, roadWidth, roadLenght)
-    #         pygame.draw.rect(surface=screen,color=(0,0,0), rect=roadSize)
-
-    #         dashLenght = 3 * SCALE_PER_M
-    #         dashGap = 6 * SCALE_PER_M
-    #         DashesNo = int(roadLenght) // (dashLenght+dashGap)
-    #         DashedDist = dashLenght*DashesNo + dashGap*(DashesNo-1)
-    #         StartGap = (roadLenght-DashedDist)//2
-    #         dashStart = roadY + StartGap
-    #         for j in range(1, roadObj.lanes): 
-    #             dashX = roadX + (LANE_WIDTH * SCALE_PER_M)*j + DASHES_WIDTH*(j-1)
-    #             DashesNo = int(roadLenght) // (dashLenght+dashGap)
-    #             dashStartPos = dashStart
-    #             for i in range(0,DashesNo):
-    #                 pygame.draw.line(screen,(255,255,255), (dashX, dashStartPos), (dashX, dashStartPos+dashLenght), DASHES_WIDTH)
-    #                 dashStartPos += (dashLenght+dashGap)
-
-                    
+    # drawGrid()
     #updates the display
     pygame.display.flip()
 

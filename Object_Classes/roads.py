@@ -5,35 +5,35 @@ from Active_Lists.ActiveNodes import ActiveNodesDict, ActiveNodesSet
 class roads():
 
 
-    def __init__(self, roadID, cordinates, roadLength, lanes, orientation, speedLimit, direction,locationsAvailable, trafficLight, nodes):
+    def __init__(self, roadID, coordinates, roadLength, lanes, speedLimit, direction):
 
 
         #road orientation 0 means road is horizontal, 1 means road is vertical
         self.road_id = roadID
-        self.cordinates = cordinates #tuple
+        self.coordinates = coordinates #list of tuple
         self.lenght = roadLength #real
         self.lanes = round(lanes,0) #integer
-        self.orientation = orientation #integer
+        # self.orientation = orientation #integer
         self.speed_limit = speedLimit #integer
         # self.is_one_way = oneWay #Boolean
         self.direction = direction
-        self.locations = locationsAvailable #list (represents spawns and destinations both)
-        self.is_traffic_light = trafficLight #real
-        self.nodes = nodes
+        # self.locations = locationsAvailable #list (represents spawns and destinations both)
+        # self.is_traffic_light = trafficLight #real
+        # self.nodes = nodes
         #dictionary, {"NO1" : 25} 25 tell node is at 25m into the road
 
 
         self.cars_data = [[] for _ in range(self.lanes)]
         # self.activeCarsList()
-        self.activeNodesList()
+        # self.activeNodesList()
 
         ActiveRoadsList[self.road_id] = self
     #road2 = roads("AA02", (0, 71.6), 100, 3, 0, 60, True, [0, 250, 500], None, {'N03':25, "N04":50, "N05":100})
-    def activeNodesList(self):
-        nodes_Dict = self.nodes
-        nodeID = nodes_Dict.keys()
-        for node in nodeID:
-            ActiveNodesSet.add(node)
+    # def activeNodesList(self):
+    #     nodes_Dict = self.nodes
+    #     nodeID = nodes_Dict.keys()
+    #     for node in nodeID:
+    #         ActiveNodesSet.add(node)
 
     
 

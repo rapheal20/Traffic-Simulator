@@ -59,7 +59,7 @@ scale = min(((ScreenWidth - (2*margin))/mapWidth), ((ScreenHeight - (2*margin))/
 # uses the smaller one to avoid any distortion
 
 print(scale)
-scale = 5
+# scale = 5
 screen_nodes = {}
 
 for node_id, data in projectedGraph.nodes(data=True):
@@ -91,6 +91,7 @@ for u, v, data in projectedGraph.edges(data=True):
     # Make sure both ends of the road exist in our screen dictionary
     # print(u, v)
     # print(data)
+    # print(data['oneway'])
     if u in screen_nodes and v in screen_nodes:
         wayLanes = {}
 
@@ -125,6 +126,6 @@ for u, v, data in projectedGraph.edges(data=True):
             FinalLaneCounts[osmid] = MostCommonLanes
 
 
-print(FinalLaneCounts)
+# print(FinalLaneCounts)
 
 
