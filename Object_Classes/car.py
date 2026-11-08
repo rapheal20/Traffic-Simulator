@@ -97,21 +97,18 @@ class car():
 
 
         #Routing Properties
-        
-        spawn_location = random.randint(0, len(AvailableDestinations)-1)
-        destination_location = random.randint(0, len(AvailableDestinations)-1)
-        while spawn_location == destination_location:
-            destination_location = random.randint(0, len(AvailableDestinations)-1)
         self.spawn = spawn #AvailableDestinations[spawn_location]
+        self.destinationList = destinationList
         self.destination = destinationList[0] #AvailableDestinations[destination_location]
         self.routing_preference = random.randint(0, 1)
         #0: Less Distance
         #1: Less time
         self.route = self.pathFinder(graph, self.spawn, self.destination)
-
-        # self.roadRoute = self.roadPath(graph)
-
-        ActiveCarsNow.append(self)
+        
+        #only appends in the list if the spawna and destination are reachable
+        if self.route:
+            self.roadRoute = self.roadPath(graph)
+            ActiveCarsNow.append(self)
 
         
 
@@ -264,97 +261,74 @@ class car():
                 'Distance' : round(distance_travelled,3)}
     
     def pathFinder(self, graph, start, destination):
-        NodeDist = {}
-        inf = sys.maxsize
-        for node in graph.keys():
-            NodeDist[node] = {"cost" : inf, "pred" : ""}
-        
-        NodeDist[start]['cost'] = 0
+        try:
+            NodeDist = {}
+            inf = sys.maxsize
+            for node in graph.keys():
+                NodeDist[node] = {"cost" : inf, "pred" : ""}
+            
+            NodeDist[start]['cost'] = 0
 
-        VisitedNodes = []
-        tempSRC = start
-        steps = len(graph) - 1 #it takes n-1 steps to complete
-        min_heap = []  
-        heappush(min_heap, (0, start))
-        while min_heap:
-            currentCost, currentNode = heappop(min_heap)
-            if currentNode in VisitedNodes:
-                continue #checks if currentNode is already visited, if it is then it skips the iteration
+            VisitedNodes = []
+            tempSRC = start
+            steps = len(graph) - 1 #it takes n-1 steps to complete
+            min_heap = []  
+            heappush(min_heap, (0, start))
+            while min_heap:
+                currentCost, currentNode = heappop(min_heap)
+                if currentNode in VisitedNodes:
+                    continue #checks if currentNode is already visited, if it is then it skips the iteration
 
-            VisitedNodes.append(currentNode)
+                VisitedNodes.append(currentNode)
 
-            if currentNode == destination:
-                #if the destination is reached, breaks the loop
-                break
-            else:
-                for j in graph[currentNode]:
-                    if j not in VisitedNodes:
-                        roadName = (graph[currentNode][j])
-                        
-                        
-                        if currentNode == ActiveRoadsList[roadName].StartNode and j == ActiveRoadsList[roadName].EndNode:
-                            dist = abs(ActiveRoadsList[roadName].StartNode - ActiveRoadsList[roadName].EndNode)
-                            #here it subtracts the distance of 2 nodes on the road to get the actual distance
-                        else:
-                            dist = ActiveRoadsList[roadName].lenght
-                            #if both the nodes are not on the same road them it uses the lenght of the road as the distance
-                        
-                        
-                        cost = currentCost + dist
-                        if cost < NodeDist[j]['cost']:
-                            NodeDist[j]['cost'] = cost #reassigns when the cost is lower
-                            NodeDist[j]['pred'] = currentNode
-                            heappush(min_heap, (NodeDist[j]['cost'], j)) #thsi creates a tuple type datatype list with the min distances adn their respective nodes
-        path = []
-        foundPred = NodeDist[destination]['pred']
-        while foundPred != start:
-            path.insert(0, foundPred)
-            foundPred = NodeDist[foundPred]['pred']
-        path.insert(0, start)
-        path.append(destination)
+                if currentNode == destination:
+                    #if the destination is reached, breaks the loop
+                    break
+                else:
+                    for j in graph[currentNode]:
+                        if j not in VisitedNodes:
+                            roadName = (graph[currentNode][j])
+                            
+                            
+                            if currentNode == ActiveRoadsList[roadName].StartNode and j == ActiveRoadsList[roadName].EndNode:
+                                dist = abs(ActiveRoadsList[roadName].StartNode - ActiveRoadsList[roadName].EndNode)
+                                #here it subtracts the distance of 2 nodes on the road to get the actual distance
+                            else:
+                                dist = ActiveRoadsList[roadName].lenght
+                                #if both the nodes are not on the same road them it uses the lenght of the road as the distance
+                            
+                            
+                            cost = currentCost + dist
+                            if cost < NodeDist[j]['cost']:
+                                NodeDist[j]['cost'] = cost #reassigns when the cost is lower
+                                NodeDist[j]['pred'] = currentNode
+                                heappush(min_heap, (NodeDist[j]['cost'], j)) #thsi creates a tuple type datatype list with the min distances adn their respective nodes
+            path = []
+            foundPred = NodeDist[destination]['pred']
+            while foundPred != start:
+                path.insert(0, foundPred)
+                foundPred = NodeDist[foundPred]['pred']
+            path.insert(0, start)
+            path.append(destination)
 
-        return path
+            return path
+        except:
+            return None
 
     def roadPath(self, graph):
-        #path making
-
-        # {
-        #     "AA01" : 25,
-        #     "BB01" : 60,
-        #     "AA02": 100
-        # }
-
-        #main dictioanry obj, has the distance it has to travel on each road
-
-
+        #list of all the roadIds the car needs to travel
         route = self.route
-        transition = {}
-        initialized = False
-        currentNode = route[0]
-
-        if self.current_road in ActiveNodesDict[currentNode].roadsConnected and not initialized:
-            initialized = True
-            turnDistance = ActiveRoadsList[self.current_road].nodes[currentNode]
-            transition[self.current_road] = turnDistance
-
+        transition = []
+        currentNode = route[0] 
         for i in range(len(route)-1):
             currentNode = route[i]
             nextNode = route[i+1]
-
-
             # gets the dictionary at currentNode, if not found default {}
             # from that dict gets the roadID of the next node
             roadID = graph.get(currentNode, {}).get(nextNode)
 
             if roadID and roadID in ActiveRoadsList:
-                roadObj = ActiveRoadsList[roadID]
-
-                if nextNode in roadObj.nodes:
-                    turnDistance = roadObj.nodes[nextNode]
-                    transition[roadID] = turnDistance
-                else:
-                    transition[roadID] = roadObj.lenght
-
+                transition.append(roadID)
         return transition
 
     # def compulsoryBraking(self):
@@ -362,16 +336,18 @@ class car():
     def turn(self):
         roadRoute = (self.roadRoute)
         roadID = self.current_road
-        
-        # print(self.X_position, roadRoute.get(roadID))
-        if abs(self.X_position - roadRoute.get(roadID)) < 5:
+        if roadID == self.destinationList[1] and self.X_position - self.destinationList[2] < 6:
+            print("Reached")
+            if self in ActiveCarsNow:
+                ActiveCarsNow.remove(self)
 
-            routeList = (list(roadRoute.keys()))
-            currentIndex = routeList.index(roadID)
-            print(routeList)
+
+        if abs(self.X_position - ActiveRoadsList(roadID).lenght) < 5:
+
             
-            if currentIndex+1 < len(routeList):
-                next_road = routeList[currentIndex+1]
+            currentIndex = roadRoute.index(roadID)            
+            if currentIndex+1 < len(roadRoute):
+                next_road = roadRoute[currentIndex+1]
 
                 if self.current_road != next_road:
                     self.current_road = next_road
@@ -389,10 +365,8 @@ class car():
                     self.X_position = startPos
                     print(self.current_road)
                     print("Turning")
-            else: 
-                print("Reached")
-                if self in ActiveCarsNow:
-                    ActiveCarsNow.remove(self)
+            # else: 
+                
 
         # elif abs(self.X_position - roadRoute.get(roadID)) < 10:
         #             # car slows down

@@ -199,7 +199,7 @@ destination = AvailableLocations[destinationIndex]
 Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
 # spawnList = [spawn, Xpos,0]
 
-destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(1,round(ActiveRoadsList[destination].lenght)),0 ]
+destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght)),0 ]
 
 # print(spawn, destination)
 car1 = car(
@@ -215,6 +215,7 @@ car1 = car(
 )
 
 print(car1.route)
+print(car1.roadRoute)
 
 
 
