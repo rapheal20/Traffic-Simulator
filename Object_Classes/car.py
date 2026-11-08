@@ -37,6 +37,7 @@ from Simulation import *
 from heapq import heappush, heapify, heappop
 import heapq
 import sys
+# from OSM_Upgrade_Visualiser import carlength
 
 
 
@@ -53,10 +54,10 @@ import sys
 
 class car():
     
-    def __init__(self, graph, carID, roadID, X_pos, laneNO, speed, acc,spawn, destinationList):
+    def __init__(self, graph, carID, roadID, X_pos, laneNO, speed, acc,spawn, destinationList, carLenght):
 
         self.car_id = carID
-        self.car_length = 4.5
+        self.car_length = carLenght
 
 
         #Car Physical properties
@@ -107,8 +108,11 @@ class car():
         
         #only appends in the list if the spawna and destination are reachable
         if self.route:
+            print("route found")
             self.roadRoute = self.roadPath(graph)
             ActiveCarsNow.append(self)
+        else:
+            print("NP")
 
         
 
@@ -133,7 +137,8 @@ class car():
                 currentCarId = i
                 break
 
-        target_turn_distance = self.roadRoute.get(self.current_road, roadData.lenght)
+        # target_turn_distance = self.roadRoute.get(self.current_road, roadData.lenght)
+        target_turn_distance = roadData.lenght
         
         if not currentCarId:
             gap = target_turn_distance - self.X_position
@@ -161,7 +166,7 @@ class car():
 
             ''' ###### BRAKE ###### '''
 
-            print("braking")
+            # print("braking")
             if gap <= (0.5 * self.safety_margin):
                 #very small gap so emergency braking (braking threshold = 85 to 90%)
                 targetSpeedMultiplier = round(random.uniform(0.1, 0.25),3)
@@ -191,7 +196,7 @@ class car():
 
             ''' ###### ACCELERATE ###### '''
 
-            print("accelerate")
+            # print("accelerate")
             if gap >= (1.5 * self.safety_margin):
                 #bigger gap then 150% so greater speed increment 1 to 1.1
                 targetSpeedMultiplier = round(random.uniform(1.0, 1.1),3)
@@ -216,7 +221,7 @@ class car():
         else:
         
             ''' ###### MAINTAIN ###### '''
-            print("maintain")
+            # print("maintain")
             targetSpeedMultiplier = round(random.uniform(0.98, 1.02),3)
 
             #uses acceleration constant
@@ -319,16 +324,17 @@ class car():
         #list of all the roadIds the car needs to travel
         route = self.route
         transition = []
-        currentNode = route[0] 
+        # currentNode = route[0] 
         for i in range(len(route)-1):
             currentNode = route[i]
             nextNode = route[i+1]
             # gets the dictionary at currentNode, if not found default {}
             # from that dict gets the roadID of the next node
-            roadID = graph.get(currentNode, {}).get(nextNode)
+            # roadID = graph.get(currentNode, {}).get(nextNode)
+            roadID = graph[currentNode][nextNode]
 
-            if roadID and roadID in ActiveRoadsList:
-                transition.append(roadID)
+            # if roadID and roadID in ActiveRoadsList:
+            transition.append(roadID)
         return transition
 
     # def compulsoryBraking(self):
@@ -336,15 +342,17 @@ class car():
     def turn(self):
         roadRoute = (self.roadRoute)
         roadID = self.current_road
-        if roadID == self.destinationList[1] and self.X_position - self.destinationList[2] < 6:
+        
+        if roadID == self.destinationList[1] and abs(self.X_position - self.destinationList[2]) < 6:
             print("Reached")
-            if self in ActiveCarsNow:
-                ActiveCarsNow.remove(self)
+            # if self in ActiveCarsNow:
+            ActiveCarsNow.remove(self)
 
 
-        if abs(self.X_position - ActiveRoadsList(roadID).lenght) < 5:
+        elif abs(self.X_position - ActiveRoadsList[roadID].lenght) < 5:
 
-            
+            print(roadRoute)
+            print(roadID)
             currentIndex = roadRoute.index(roadID)            
             if currentIndex+1 < len(roadRoute):
                 next_road = roadRoute[currentIndex+1]
@@ -352,18 +360,12 @@ class car():
                 if self.current_road != next_road:
                     self.current_road = next_road
                     startPos = 0.0
-
-                    #checks for the node offset and then positions the car there
-                    for nodeId, nodeOffset in ActiveRoadsList[next_road].nodes.items():
-                        if nodeId in self.route:
-                            startPos = nodeOffset
-                            break
                     laneNumbers = ActiveRoadsList[next_road].lanes
                     NewLane = random.randint(0, laneNumbers-1)
 
                     self.lane_No = NewLane
                     self.X_position = startPos
-                    print(self.current_road)
+                    # print(self.current_road)
                     print("Turning")
             # else: 
                 

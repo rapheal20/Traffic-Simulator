@@ -55,14 +55,12 @@ zoom_scale = 1.0
 MIN_ZOOM = 0.2
 MAX_ZOOM = 5.0
 
-carWidth = 1.8
+carWidth = 2
 carlength = 4.5
 
 import random
 running = True
 mapSaved = False
-
-colouring = {}
 
 AvailableLocations = []
 # MAP SAVING
@@ -96,6 +94,11 @@ for u, v, data in projectedGraph.edges(data=True):
         # calculates its euclidean length, basically the hypotneous of it
         length = round(np.linalg.norm(direction),0)
         UnitVector = direction/length
+
+        rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
+        normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
+
+
         oneway = data.get('oneway', True)
         if not oneway:
             if LaneNo % 2 != 0:
@@ -123,6 +126,7 @@ for u, v, data in projectedGraph.edges(data=True):
             oneway= oneway,
             speedLimit= speedlimit,
             unitVec= UnitVector,
+            normal=normal,
             startNode=u,
             endNode=v
         )
@@ -157,8 +161,6 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
         )
 
 PathFindingGraph = {}
-# for NodeID, NodeData in ActiveNodesDict.items():
-
 for RoadId, RoadData in ActiveRoadsList.items():
     u = RoadData.StartNode
     v = RoadData.EndNode
@@ -167,18 +169,12 @@ for RoadId, RoadData in ActiveRoadsList.items():
     else:
         PathFindingGraph[u][v] = RoadId
 
-# print(PathFindingGraph)
+print(PathFindingGraph)
     # print(RoadId, "=", RoadData.StartNode, RoadData.EndNode, "\n")
 
 
-for ID,Data in PathFindingGraph.items():
-    print(ID, "=", Data,"\n")
-
-
-
-
-
-
+# for ID,Data in PathFindingGraph.items():
+#     print(ID, "=", Data,"\n")
 
 
 
@@ -186,43 +182,38 @@ for ID,Data in PathFindingGraph.items():
 # print()
 
 #Initializing cars
-NoOfLocations = len(AvailableLocations) - 1
-spawnIndex = random.randint(1,NoOfLocations)
-destinationIndex = random.randint(1,NoOfLocations)
-while spawnIndex == destinationIndex:
+while len(ActiveCarsNow) != 1:
+    NoOfLocations = len(AvailableLocations) - 1
+    spawnIndex = random.randint(1,NoOfLocations)
     destinationIndex = random.randint(1,NoOfLocations)
+    while spawnIndex == destinationIndex:
+        destinationIndex = random.randint(1,NoOfLocations)
 
-spawn = AvailableLocations[spawnIndex]
-destination = AvailableLocations[destinationIndex]
+    spawn = AvailableLocations[spawnIndex]
+    destination = AvailableLocations[destinationIndex]
 
-# if AvailableLocations[spawn] == "Edge":
-Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
-# spawnList = [spawn, Xpos,0]
+    # if AvailableLocations[spawn] == "Edge":
+    Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
+    # spawnList = [spawn, Xpos,0]
 
-destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght)),0 ]
+    destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght)),0 ]
 
 # print(spawn, destination)
-car1 = car(
-    graph=PathFindingGraph,
-    carID=str(uuid.uuid4()),
-    roadID=spawn,
-    X_pos=Xpos,
-    laneNO=0,
-    speed=random.randint(1,15),
-    acc=random.uniform(0, 2.4),
-    spawn=ActiveRoadsList[spawn].StartNode,
-    destinationList=destinationData
-)
 
-print(car1.route)
-print(car1.roadRoute)
-
-
-
-sys.exit()
-
-# print(ActiveRoadsList)
-
+    car(
+        graph=PathFindingGraph,
+        carID=str(uuid.uuid4()),
+        roadID=spawn,
+        X_pos=Xpos,
+        laneNO=0,
+        speed=random.randint(1,15),
+        acc=random.uniform(0, 2.4),
+        spawn=ActiveRoadsList[spawn].StartNode,
+        destinationList=destinationData,
+        carLenght=carlength
+    )
+    # print(len(ActiveCarsNow))
+# sys.exit()
 
 while running:
     for event in pygame.event.get():
@@ -273,6 +264,8 @@ while running:
             #camera_X is the offset
             #the subtraction is for the pan and then division factors in the zoom
 
+    dt = clock.tick(60) / 1000
+    
     def drawGrid():
         current_Cell_Size = CELL_SIZE * zoom_scale
 
@@ -306,8 +299,7 @@ while running:
         # skips very small road segments/ removes garbage values
         if length >= 10: 
             Unit_Dir = roadData.UnitVector #creates the unit vector
-            rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
-            normal = rotation_Matrix.dot(Unit_Dir) #does dot multiplication
+            normal = roadData.NormalVector
             # we need the normal as to draw out the thickness of our roads we need the exact perpendicualr of its direction
             # does the dot multiplication rotates it by 90 degree
 
@@ -316,8 +308,8 @@ while running:
             halfWidth = roadWidth/2
 
 
-            nodeBufferPX1 = (ActiveNodesDict[roadData.Nodes[0]].MaxLanes * LANE_WIDTH * scale)/2 
-            nodeBufferPX2 = (ActiveNodesDict[roadData.Nodes[1]].MaxLanes * LANE_WIDTH * scale)/2 
+            nodeBufferPX1 = (ActiveNodesDict[roadData.StartNode].MaxLanes * LANE_WIDTH * scale)/2 
+            nodeBufferPX2 = (ActiveNodesDict[roadData.EndNode].MaxLanes * LANE_WIDTH * scale)/2 
             #get the node obj from the road list and find its maxlanes and cuts the road only that much
 
             #multiplying the UnitVector gives us a new arrow with that length
@@ -368,7 +360,6 @@ while running:
                     pygame.draw.line(screen,(255,255,255), tuple(current_pos), tuple(dashEnd), width=dashPixelWidth)
                     current_pos += Unit_Dir * cycleLen
 
-
     for nodeID, nodeData in ActiveNodesDict.items():
         nodeType = nodeData.Type
         if nodeType == 'traffic_signals':         
@@ -377,10 +368,8 @@ while running:
             halfnodeDim_M = (nodeData.MaxLanes * LANE_WIDTH + (nodeData.MaxLanes-1) * DASHES_WIDTH)/2
             halfnodeDim_PX = halfnodeDim_M * scale
 
-
-            UnitVector_R = ActiveRoadsList[nodeData.MainRoad].UnitVector
-            normal = rotation_Matrix.dot(UnitVector_R)
-            tangent = UnitVector_R
+            normal = ActiveRoadsList[nodeData.MainRoad].NormalVector
+            tangent = ActiveRoadsList[nodeData.MainRoad].UnitVector
 
             NCorner1 = screenPos + (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
             NCorner2 = screenPos + (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
@@ -395,14 +384,60 @@ while running:
 
     #     else:
 
+    # print(ActiveCarsNow)
+    for carObj in ActiveCarsNow:
+        carRoad = carObj.current_road
+        # print(carObj.current_road)  
+        # if not carRoad or carRoad not in ActiveRoadsList:
+        #     continue
 
-    
+        roadData = ActiveRoadsList[carRoad]
+        p1World = (roadData.coordinates)[0]
+        # print(p1World)
 
-    # for carObj in ActiveCarsNow:
-    #     carRoad = ActiveRoadsList[carObj.current_road]
+        unitVector = roadData.UnitVector
+        normal = roadData.NormalVector
+
+        #finds distance travelled across the road
+        carWorldPos = p1World + (unitVector * carObj.X_position)
+
+        LaneNo = roadData.lanes
+        # LaneOffset = (carObj.lane_No - (LaneNo - 1)/2.0) * LANE_WIDTH
+        CarCenterWorld = carWorldPos #+ (normal * LANE_WIDTH)
+
+
+        CarLen_PX = (carlength)
+        halfCarWidthPX = (carWidth)/2.0
+
+        #calculate coordinates, by using the unitVector car len, and normalVector car width
+        c1_world = (CarCenterWorld + (normal * halfCarWidthPX))
+        c2_world = (CarCenterWorld - (normal * halfCarWidthPX))
+        c3_world = (CarCenterWorld - (unitVector * CarLen_PX) - (normal * halfCarWidthPX))
+        c4_world = (CarCenterWorld - (unitVector * CarLen_PX) + (normal * halfCarWidthPX))
+
+        screenCorners = [
+            tuple((c1_world * scale) + cameraOffset),
+            tuple((c2_world * scale) + cameraOffset),
+            tuple((c3_world * scale) + cameraOffset),
+            tuple((c4_world * scale) + cameraOffset)
+        ]
+        
+        
+
+        pygame.draw.polygon(surface=screen, color=(255,0,0), points=screenCorners)
 
     #updates the display
     pygame.display.flip()
+
+    # print("Simulation Updates")
+    for roadObj in ActiveRoadsList.values():
+        roadObj.activeCarsList()
+        for i in range(roadObj.lanes):
+            # print(roadObj.cars_data[i])
+            for carObj in roadObj.cars_data[i]:
+                carObj.carAheadDataFind()
+                carObj.carAccelerate(dt*0.02)
+                carObj.turn()
 
 
 pygame.quit()
