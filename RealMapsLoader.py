@@ -15,10 +15,6 @@ graph = ox.graph_from_point((40.7580, -73.9855), dist=400, network_type='drive')
 projectedGraph = ox.project_graph(graph)
 #converts the graph form latitide and longitude to XY coordiantes(needed for pygames)
 
-# print(projectedGraph.nodes)
-
-# fig, ax = ox.plot_graph(projectedGraph, node_size=0, edge_color="skyblue", edge_linewidth=0.5)
-# nodes, edges = ox.convert.graph_to_gdfs(projectedGraph)
 
 # print(nodes)
 print((projectedGraph.edges(data=True)))
@@ -97,7 +93,8 @@ for u, v, data in projectedGraph.edges(data=True):
     if u in screen_nodes and v in screen_nodes:
         wayLanes = {}
 
-        osmid = data.get('osmid') #every continous road segment shares the same osmid 
+        #replaced osmid with road name as the id was only unique for roads conencting a segment
+        name = data.get('name') #every continous road segment shares the same osmid 
         LaneNo = data.get('lanes', 1)
 
         # isinstance checks if the given object is of the given datatype
@@ -112,20 +109,17 @@ for u, v, data in projectedGraph.edges(data=True):
             except:
                 LaneNo = 1
 
-        if isinstance(osmid, list):
-            osmid = osmid[0]
+        if isinstance(name, list):
+            name = name[0]
 
-        if osmid not in wayLanes:
-            wayLanes[osmid] = []
-        wayLanes[osmid].append(LaneNo)
+        if name not in wayLanes:
+            wayLanes[name] = []
+        wayLanes[name].append(LaneNo)
 
         
-        for osmid, laneList in wayLanes.items():
-            # LaneCounts = Counter(laneList)
-            # counts whcih value apeared how many times
-
+        for name, laneList in wayLanes.items():
             MostCommonLanes = int(st.mode(laneList))
-            FinalLaneCounts[osmid] = MostCommonLanes
+            FinalLaneCounts[name] = MostCommonLanes
 
 
 print(FinalLaneCounts)

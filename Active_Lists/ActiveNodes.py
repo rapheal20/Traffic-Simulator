@@ -1,6 +1,0 @@
-ActiveNodesDict = {}
-
-NodesforRoad = {}
-
-ActiveNodesSet = set()
-

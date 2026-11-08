@@ -18,10 +18,7 @@ from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 # import ObjectCreations
 
-from Active_Lists.ActiveNodes import ActiveNodesDict, NodesforRoad
-from Active_Lists.ActiveRoads import ActiveRoadsList
-from Active_Lists.ActiveCars import ActiveCarsNow
-# Roadpx = (500 * 5, )
+from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 
 # CONSTANTS
 SCALE_PER_M = 5
@@ -60,18 +57,25 @@ MAX_ZOOM = 5.0
 carWidth = 1.8
 carlength = 4.5
 
+import random
 running = True
 mapSaved = False
 
+colouring = {}
 # MAP SAVING
 for u, v, data in projectedGraph.edges(data=True):
 
     # Make sure both ends of the road exist in our screen dictionary
     if u in screen_nodes and v in screen_nodes:
-        osmid = data.get('osmid')
-        if isinstance(osmid,list):
-            osmid = osmid[0]
-        LaneNo = FinalLaneCounts.get(osmid,1)
+        name = data.get('name')
+        if isinstance(name,list):
+            name = name[0]
+        LaneNo = FinalLaneCounts.get(name)
+
+        # name = data.get('name')
+
+        # if name not in colouring.keys():
+        #     colouring[name] = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
 
         #Linear Algebra concept
         start_pos = screen_nodes[u][0]
@@ -112,7 +116,10 @@ for u, v, data in projectedGraph.edges(data=True):
             lanes= LaneNo,
             oneway= oneway,
             speedLimit= speedlimit,
-            unitVec= UnitVector
+            unitVec= UnitVector,
+            nodes=[u,v],
+            osmid=name
+
         )
 
 
@@ -191,8 +198,6 @@ while running:
             elif scale < MIN_ZOOM:
                 scale = MIN_ZOOM 
 
-            # print(scale)
-
             new_world_X = (mouse_X - camera_X) / zoom_scale
             new_world_Y = (mouse_Y - camera_Y) / zoom_scale      
 
@@ -234,7 +239,7 @@ while running:
         dashPixelWidth = max(1, int(DASHES_WIDTH * scale)) #if dashes width less then 1 then default width 1px
         
         # skips very small road segments/ removes garbage values
-        if length >= 20: 
+        if length >= 10: 
             Unit_Dir = roadData.UnitVector #creates the unit vector
             rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
             normal = rotation_Matrix.dot(Unit_Dir) #does dot multiplication
@@ -245,9 +250,14 @@ while running:
             # nodeBuffer = bufferArea * scale
             halfWidth = roadWidth/2
 
+
+            nodeBufferPX1 = (ActiveNodesDict[roadData.Nodes[0]].MaxLanes * LANE_WIDTH * scale)/2 
+            nodeBufferPX2 = (ActiveNodesDict[roadData.Nodes[1]].MaxLanes * LANE_WIDTH * scale)/2 
+            #get the node obj from the road list and find its maxlanes and cuts the road only that much
+
             #multiplying the UnitVector gives us a new arrow with that length
-            trimmedP1 = screen1 + Unit_Dir * roadWidth
-            trimmedP2 = screen2 - Unit_Dir * roadWidth
+            trimmedP1 = screen1 + Unit_Dir * nodeBufferPX1
+            trimmedP2 = screen2 - Unit_Dir * nodeBufferPX2
             trimmedlength = np.linalg.norm(trimmedP2-trimmedP1)
 
             # normal is also a unit vector but in perpendicualr direction
@@ -258,11 +268,12 @@ while running:
 
             PolygonCords = [tuple(Corner1), tuple(Corner2), tuple(Corner3), tuple(Corner4)]
 
-            if roadData.oneway:
-                pygame.draw.polygon(surface=screen, color=(0, 0, 255), points=PolygonCords)
-            else:
-                pygame.draw.polygon(surface=screen, color=(255, 0, 0), points=PolygonCords)
-            # pygame.draw.polygon(surface=screen, color=(60, 60, 60), points=PolygonCords)
+            # if roadData.oneway:
+            #     pygame.draw.polygon(surface=screen, color=(0, 0, 255), points=PolygonCords)
+            # else:
+            #     pygame.draw.polygon(surface=screen, color=(255, 0, 0), points=PolygonCords)
+            # pygame.draw.polygon(surface=screen, color=colouring[roadData.osmid], points=PolygonCords)
+            pygame.draw.polygon(surface=screen, color=(25,25,25), points=PolygonCords)
 
             dashlength = DASH_length * scale
             dashGap = GAP_length * scale
@@ -313,7 +324,7 @@ while running:
 
             NodeCoordinates = (NCorner1, NCorner2, NCorner3, NCorner4)
 
-            pygame.draw.polygon(screen, (0,255,0), points=NodeCoordinates)
+            pygame.draw.polygon(screen, (25,25,25), points=NodeCoordinates)
 
     #     elif nodeType == 'roundabout':
 

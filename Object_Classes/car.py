@@ -32,10 +32,7 @@
 #     └── change_lane()
 
 import random
-# from Object_Classes.roads import roads
-from Active_Lists.ActiveCars import ActiveCarsNow
-from Active_Lists.ActiveRoads import ActiveRoadsList
-from Active_Lists.ActiveNodes import ActiveNodesDict
+from Active_Lists.ActiveList import ActiveCarsNow, ActiveRoadsList, ActiveNodesDict
 from Simulation import *
 from heapq import heappush, heapify, heappop
 import heapq

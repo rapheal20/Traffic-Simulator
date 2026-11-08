@@ -269,16 +269,16 @@ Recalculate route with Dijkstra
     <!-- Design Road -->
     <!-- Design Node -->
     Design TrafficLight
-    Design Simulation
-    Design road network structure
-    Define relationships between objects
-3. Road Network
-    Create nodes/intersections
+    <!-- Design Simulation -->
+    <!-- Design road network structure -->
+    <!-- Define relationships between objects -->
+<!-- 3. Road Network -->
+    <!-- Create nodes/intersections -->
     <!-- Create roads -->
     <!-- Add road properties -->
     <!-- Connect roads to nodes -->
     <!-- Implement lane structure -->
-    Build/test sample road network
+    <!-- Build/test sample road network -->
 4. Car System
     <!-- Implement car properties -->
     <!-- Implement driver properties -->
@@ -391,7 +391,7 @@ Recalculate route with Dijkstra
 20. Visualization
     <!-- Render roads -->
     <!-- Render lanes -->
-    Render intersections
+    <!-- Render intersections -->
     <!-- Render cars -->
     Render traffic lights
     Implement camera

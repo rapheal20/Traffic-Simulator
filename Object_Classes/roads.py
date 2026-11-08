@@ -1,13 +1,9 @@
-from Active_Lists.ActiveCars import ActiveCarsNow
-from Active_Lists.ActiveRoads import ActiveRoadsList
-from Active_Lists.ActiveNodes import ActiveNodesDict, ActiveNodesSet
+from Active_Lists.ActiveList import ActiveCarsNow, ActiveRoadsList, ActiveNodesDict, ActiveNodesSet
 
 class roads():
 
 
-    def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec):
-
-
+    def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec, nodes, osmid):
         #road orientation 0 means road is horizontal, 1 means road is vertical
         self.road_id = roadID
         self.coordinates = coordinates #list of tuple
@@ -17,6 +13,8 @@ class roads():
         self.speed_limit = speedLimit #integer
         self.oneway = oneway #Boolean
         self.UnitVector = unitVec
+        self.Nodes = nodes
+        self.osmid = osmid
         # self.locations = locationsAvailable #list (represents spawns and destinations both)
         # self.is_traffic_light = trafficLight #real
         # self.nodes = nodes
@@ -28,12 +26,6 @@ class roads():
         # self.activeNodesList()
 
         ActiveRoadsList[self.road_id] = self
-    #road2 = roads("AA02", (0, 71.6), 100, 3, 0, 60, True, [0, 250, 500], None, {'N03':25, "N04":50, "N05":100})
-    # def activeNodesList(self):
-    #     nodes_Dict = self.nodes
-    #     nodeID = nodes_Dict.keys()
-    #     for node in nodeID:
-    #         ActiveNodesSet.add(node)
 
     
 
