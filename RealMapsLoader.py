@@ -59,7 +59,7 @@ scale = min(((ScreenWidth - (2*margin))/mapWidth), ((ScreenHeight - (2*margin))/
 # uses the smaller one to avoid any distortion
 
 print(scale)
-scale = 5
+# scale = 10
 screen_nodes = {}
 
 for node_id, data in projectedGraph.nodes(data=True):
