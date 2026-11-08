@@ -40,20 +40,20 @@ import sys
 
 
 
-graph = {
-    "N01" : {"N02" :"AA01", "N03":"BB01"},
-    "N02" : {"N05" :"BB03", "N07" : "BB03"},
-    "N03" : {"N04" :"AA02", "N05":'AA02'},
-    "N04" : {"N05" :"AA02", "N06":"BB02"},
-    "N05" : {"N07" :"BB03"},
-    "N06" : {"N07" :"AA03"},
-    "N07" : {}
-}
+# graph = {
+#     "N01" : {"N02" :"AA01", "N03":"BB01"},
+#     "N02" : {"N05" :"BB03", "N07" : "BB03"},
+#     "N03" : {"N04" :"AA02", "N05":'AA02'},
+#     "N04" : {"N05" :"AA02", "N06":"BB02"},
+#     "N05" : {"N07" :"BB03"},
+#     "N06" : {"N07" :"AA03"},
+#     "N07" : {}
+# }
 
 
 class car():
     
-    def __init__(self, carID, roadID, X_pos, laneNO, speed, acc, destination):
+    def __init__(self, graph, carID, roadID, X_pos, laneNO, speed, acc,spawn, destinationList):
 
         self.car_id = carID
         self.car_length = 4.5
@@ -102,14 +102,14 @@ class car():
         destination_location = random.randint(0, len(AvailableDestinations)-1)
         while spawn_location == destination_location:
             destination_location = random.randint(0, len(AvailableDestinations)-1)
-        # self.spawn = spawn #AvailableDestinations[spawn_location]
-        self.destination = destination #AvailableDestinations[destination_location]
+        self.spawn = spawn #AvailableDestinations[spawn_location]
+        self.destination = destinationList[0] #AvailableDestinations[destination_location]
         self.routing_preference = random.randint(0, 1)
         #0: Less Distance
         #1: Less time
         self.route = self.pathFinder(graph, self.spawn, self.destination)
 
-        self.roadRoute = self.roadPath(graph)
+        # self.roadRoute = self.roadPath(graph)
 
         ActiveCarsNow.append(self)
 
@@ -292,8 +292,8 @@ class car():
                         roadName = (graph[currentNode][j])
                         
                         
-                        if currentNode in ActiveRoadsList[roadName].nodes and j in ActiveRoadsList[roadName].nodes:
-                            dist = abs(ActiveRoadsList[roadName].nodes[currentNode] - ActiveRoadsList[roadName].nodes[j])
+                        if currentNode == ActiveRoadsList[roadName].StartNode and j == ActiveRoadsList[roadName].EndNode:
+                            dist = abs(ActiveRoadsList[roadName].StartNode - ActiveRoadsList[roadName].EndNode)
                             #here it subtracts the distance of 2 nodes on the road to get the actual distance
                         else:
                             dist = ActiveRoadsList[roadName].lenght

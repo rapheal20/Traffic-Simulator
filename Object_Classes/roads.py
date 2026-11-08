@@ -3,7 +3,7 @@ from Active_Lists.ActiveList import ActiveCarsNow, ActiveRoadsList, ActiveNodesD
 class roads():
 
 
-    def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec, nodes):
+    def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec, startNode, endNode):
         #road orientation 0 means road is horizontal, 1 means road is vertical
         self.road_id = roadID
         self.coordinates = coordinates #list of tuple
@@ -13,7 +13,8 @@ class roads():
         self.speed_limit = speedLimit #integer
         self.oneway = oneway #Boolean
         self.UnitVector = unitVec
-        self.Nodes = nodes
+        self.StartNode = startNode
+        self.EndNode = endNode
         # self.osmid = osmid
         # self.locations = locationsAvailable #list (represents spawns and destinations both)
         # self.is_traffic_light = trafficLight #real

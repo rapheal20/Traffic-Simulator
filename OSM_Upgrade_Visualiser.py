@@ -123,7 +123,8 @@ for u, v, data in projectedGraph.edges(data=True):
             oneway= oneway,
             speedLimit= speedlimit,
             unitVec= UnitVector,
-            nodes=[u,v]
+            startNode=u,
+            endNode=v
         )
 
 for nodeID, nodeData in projectedGraph.nodes(data=True):
@@ -155,15 +156,28 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
             mainRoad= mainRoad
         )
 
+PathFindingGraph = {}
+# for NodeID, NodeData in ActiveNodesDict.items():
+
+for RoadId, RoadData in ActiveRoadsList.items():
+    u = RoadData.StartNode
+    v = RoadData.EndNode
+    if PathFindingGraph.get(u) == None:
+        PathFindingGraph[u] = {v:RoadId}
+    else:
+        PathFindingGraph[u][v] = RoadId
+
+# print(PathFindingGraph)
+    # print(RoadId, "=", RoadData.StartNode, RoadData.EndNode, "\n")
+
+
+for ID,Data in PathFindingGraph.items():
+    print(ID, "=", Data,"\n")
 
 
 
 
 
-
-
-
-sys.exit()
 
 
 
@@ -185,23 +199,26 @@ destination = AvailableLocations[destinationIndex]
 Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
 # spawnList = [spawn, Xpos,0]
 
-destinationData = [destination, random.randint(1,round(ActiveRoadsList[destination].lenght)),0 ]
+destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(1,round(ActiveRoadsList[destination].lenght)),0 ]
 
 # print(spawn, destination)
-car(
+car1 = car(
+    graph=PathFindingGraph,
     carID=str(uuid.uuid4()),
     roadID=spawn,
     X_pos=Xpos,
     laneNO=0,
     speed=random.randint(1,15),
     acc=random.uniform(0, 2.4),
-    destination=destinationData
+    spawn=ActiveRoadsList[spawn].StartNode,
+    destinationList=destinationData
 )
 
+print(car1.route)
 
 
 
-
+sys.exit()
 
 # print(ActiveRoadsList)
 
