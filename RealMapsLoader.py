@@ -21,7 +21,7 @@ projectedGraph = ox.project_graph(graph)
 # nodes, edges = ox.convert.graph_to_gdfs(projectedGraph)
 
 # print(nodes)
-# print((projectedGraph.edges(data=True)))
+print((projectedGraph.edges(data=True)))
 
 #.nodes gives a dict with all the node ids and their data
 #if we use data=True then its a dict with data else just a list of node ids
@@ -51,7 +51,7 @@ mapWidth = maxX - minX
 mapHeight = maxY - minY
 
 ScreenWidth = 1000
-ScreenHeight = 800
+ScreenHeight = 1366
 margin = 50 #to make a border
 
 scale = min(((ScreenWidth - (2*margin))/mapWidth), ((ScreenHeight - (2*margin))/mapHeight))
@@ -59,8 +59,14 @@ scale = min(((ScreenWidth - (2*margin))/mapWidth), ((ScreenHeight - (2*margin))/
 # uses the smaller one to avoid any distortion
 
 print(scale)
-# scale = 10
+# scale = 5
 screen_nodes = {}
+'''
+screen_nodes = {
+    3424545 : [(x, y), 4]
+}
+'''
+
 
 for node_id, data in projectedGraph.nodes(data=True):
     pixelX = margin + (data['x']-minX)*scale
@@ -88,9 +94,6 @@ for node_id, data in projectedGraph.nodes(data=True):
 FinalLaneCounts = {}
 
 for u, v, data in projectedGraph.edges(data=True):
-    # Make sure both ends of the road exist in our screen dictionary
-    # print(u, v)
-    # print(data)
     if u in screen_nodes and v in screen_nodes:
         wayLanes = {}
 

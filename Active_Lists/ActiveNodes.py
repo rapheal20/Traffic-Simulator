@@ -1,5 +1,6 @@
 ActiveNodesDict = {}
 
+NodesforRoad = {}
 
 ActiveNodesSet = set()
 

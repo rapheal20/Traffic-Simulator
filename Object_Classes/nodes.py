@@ -6,28 +6,21 @@ import heapq
 class nodes():
 
 
-    def __init__(self, ID, roads):
+    def __init__(self, ID, coordinates, roads, type, connections, maxLanes, mainRoad ):
         self.NodeID = ID
-        # self.postion = map_position
-        # self.intersection_type = intType
-        # 0 = 1 road merging into another
-        # 1 = roundabout
-        # self.connecting_roads = roads #dicionary
-        # #{'North' : "AA01", 'South': "BB12", 'East': "EE89", 'West' : 'BC76'}
-        # #dictionary format is direction : Road id
-        # self.road_connections = connections
-        # # {
-        # #     "AA01": "N02", this tells that if a car choses to go on th eroad AA01 then it will reach N02
-        # #     "AA02": "N03",
-        # #     "BB01": "N04",
-        # #     "BB02": "N05"
-        # # }
+        self.Coordinates = coordinates
+        self.RoadNo = roads
+        self.Type = type
+        self.Connections = connections
+        self.MaxLanes = maxLanes
+        self.MainRoad = mainRoad
 
-        self.roadsConnected = roads #List
-        #this tells which roads are connected to each other using this node
-        # ['AA01', 'BB01']
+
+
+
+
+       
         ActiveNodesDict[self.NodeID] = self
-        # AllNodes = sorted(ActiveNodesSet)
 
         
        
