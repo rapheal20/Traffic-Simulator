@@ -16,6 +16,7 @@ from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
+from Object_Classes.car import car
 # import ObjectCreations
 
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
@@ -62,6 +63,8 @@ running = True
 mapSaved = False
 
 colouring = {}
+
+AvailableLocations = []
 # MAP SAVING
 for u, v, data in projectedGraph.edges(data=True):
 
@@ -106,9 +109,12 @@ for u, v, data in projectedGraph.edges(data=True):
         if v not in NodesforRoad:
             NodesforRoad[v] = []
         NodesforRoad[v].append(uniqueID)
-        
 
 
+        #if the road has a single lane it is considered minor and will be used for spawing cars
+        if LaneNo < 2:
+            AvailableLocations.append(uniqueID)
+            
         roads(
             roadID= uniqueID,
             coordinates= [vector1,vector2],
@@ -117,13 +123,8 @@ for u, v, data in projectedGraph.edges(data=True):
             oneway= oneway,
             speedLimit= speedlimit,
             unitVec= UnitVector,
-            nodes=[u,v],
-            osmid=name
-
+            nodes=[u,v]
         )
-
-
-print(NodesforRoad)
 
 for nodeID, nodeData in projectedGraph.nodes(data=True):
     # print(nodeID, nodeData)
@@ -140,7 +141,10 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
                 maxLanes = laneNo
                 mainRoad = roadID
 
-        
+        #if a node only connects to a single road then it will be considered for spawning
+        # if roadNum < 2:
+        #     AvailableLocations[nodeID] = "Node"
+       
         nodes(
             ID=nodeID,
             coordinates=coordinates,
@@ -152,9 +156,52 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
         )
 
 
-# print(ActiveNodesDict)
 
-# sys.exit()
+
+
+
+
+
+
+sys.exit()
+
+
+
+
+# print(ActiveNodesDict[42428283].RoadNo, ActiveNodesDict[42428283].Connections)
+# print()
+
+#Initializing cars
+NoOfLocations = len(AvailableLocations) - 1
+spawnIndex = random.randint(1,NoOfLocations)
+destinationIndex = random.randint(1,NoOfLocations)
+while spawnIndex == destinationIndex:
+    destinationIndex = random.randint(1,NoOfLocations)
+
+spawn = AvailableLocations[spawnIndex]
+destination = AvailableLocations[destinationIndex]
+
+# if AvailableLocations[spawn] == "Edge":
+Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
+# spawnList = [spawn, Xpos,0]
+
+destinationData = [destination, random.randint(1,round(ActiveRoadsList[destination].lenght)),0 ]
+
+# print(spawn, destination)
+car(
+    carID=str(uuid.uuid4()),
+    roadID=spawn,
+    X_pos=Xpos,
+    laneNO=0,
+    speed=random.randint(1,15),
+    acc=random.uniform(0, 2.4),
+    destination=destinationData
+)
+
+
+
+
+
 
 # print(ActiveRoadsList)
 

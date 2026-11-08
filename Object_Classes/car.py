@@ -37,8 +37,7 @@ from Simulation import *
 from heapq import heappush, heapify, heappop
 import heapq
 import sys
-# from ObjectCreations import graph
-# from ObjectCreations import *
+
 
 
 graph = {
@@ -54,7 +53,7 @@ graph = {
 
 class car():
     
-    def __init__(self, carID, roadID, X_pos, laneNO, speed, acc, spawn, destination):
+    def __init__(self, carID, roadID, X_pos, laneNO, speed, acc, destination):
 
         self.car_id = carID
         self.car_length = 4.5
@@ -103,7 +102,7 @@ class car():
         destination_location = random.randint(0, len(AvailableDestinations)-1)
         while spawn_location == destination_location:
             destination_location = random.randint(0, len(AvailableDestinations)-1)
-        self.spawn = spawn #AvailableDestinations[spawn_location]
+        # self.spawn = spawn #AvailableDestinations[spawn_location]
         self.destination = destination #AvailableDestinations[destination_location]
         self.routing_preference = random.randint(0, 1)
         #0: Less Distance
@@ -398,162 +397,3 @@ class car():
         # elif abs(self.X_position - roadRoute.get(roadID)) < 10:
         #             # car slows down
         #             print("SLOW")
-
-
-
-# # for i in trash:
-        
-#     road1 = roads(
-#                     roadID= 'AA01',
-#                     cordinates= (25,25),
-#                     roadLength = 60,
-#                     lanes = 4,
-#                     orientation=0,
-#                     speedLimit = 60,
-#                     oneWay = True,
-#                     locationsAvailable = [0, 250, 500],
-#                     trafficLight = 60,
-#                     )
-
-#     road2 = roads(
-#                     roadID= 'BB01',
-#                     cordinates= (60+25,0),
-#                     roadLength = 60,
-#                     lanes = 2,
-#                     orientation=1,
-#                     speedLimit = 60,
-#                     oneWay = True,
-#                     locationsAvailable = [0, 250, 500],
-#                     trafficLight = 50,
-#                     )
-
-#     #all operations
-#     # car1 = car("A01", "AA01", 20, 0, 40, 0)
-#     # car2 = car("A02", "AA01", 23, 0, 45, 0)    # 3 m gap — decelerate
-
-#     # car3 = car("A03", "AA01", 40, 0, 35, 0)
-#     # car4 = car("A04", "AA01", 48, 0, 34, 0)    # 8 m gap — maintain (if within threshold)
-
-#     # car5 = car("A05", "AA01", 65, 0, 25, 0)
-#     # car6 = car("A06", "AA01", 82, 0, 30, 0)    # 17 m gap — accelerate
-
-#     # car7 = car("A07", "AA01", 100, 0, 55, 0)
-#     # car8 = car("A08", "AA01", 104, 0, 30, 0)  # 4 m gap — decelerate
-
-#     # car9 = car("A09", "AA01", 125, 0, 40, 0)
-#     # car10 = car("A10", "AA01", 135, 0, 39, 0)  # 10 m gap — maintain (if within threshold)
-
-#     # car11 = car("A11", "AA01", 160, 0, 20, 0)
-#     # car12 = car("A12", "AA01", 185, 0, 45, 0)  # 25 m gap — accelerate
-
-#     # car13 = car("A13", "AA01", 210, 0, 50, 0)
-#     # car14 = car("A14", "AA01", 213, 0, 15, 0)  # 3 m gap — decelerate
-
-#     # car15 = car("A15", "AA01", 240, 0, 35, 0)
-#     # car16 = car("A16", "AA01", 252, 0, 35, 0)  # 12 m gap — maintain (if within threshold)
-
-
-
-
-#     # car1 = car("A01", 'AA01', 98, 0, 52, 0)
-#     # car2 = car("A02", 'AA01', 67, 0, 47, 0)
-#     # car3 = car("B01", 'AA01', 56, 0, 43, 0)
-#     # car4 = car("B02", 'AA01', 230, 0, 58, 0)
-#     # car5 = car("B03", 'AA01', 75, 0, 50, 0)
-#     # car6 = car("B04", 'AA01', 25, 0, 38, 0)
-#     # car7 = car("B05", 'AA01', 145, 0, 45, 0)
-#     # car8 = car("B06", 'AA01', 190, 0, 55, 0)
-#     # car9 = car("B07", 'AA01', 275, 0, 42, 0)
-#     # car10 = car("B08", 'AA01', 115, 0, 48, 0)
-#     # car11 = car("B09", 'AA01', 355, 0, 60, 0)
-#     # car12 = car("B10", 'AA01', 310, 0, 35, 0)
-#     # car13 = car("B11", 'AA01', 265, 0, 53, 0)
-#     # print(ActiveCarsNow)
-
-
-
-#     #Test Data With Braking and Acc
-#     # car1 = car("A01", "AA01", 20, 0, 45, 0)
-#     # car2 = car("A02", "AA01", 22, 0, 40, 0)   # 2 m gap
-#     # car3 = car("A03", "AA01", 25, 0, 30, 0)   # 3 m gap
-#     # car4 = car("A04", "AA01", 29, 0, 55, 0)   # 4 m gap
-#     # car5 = car("A05", "AA01", 34, 0, 25, 0)   # 5 m gap
-#     # car6 = car("A06", "AA01", 42, 0, 50, 0)   # 8 m gap
-#     # car7 = car("A07", "AA01", 44, 0, 20, 0)   # 2 m gap
-#     # car8 = car("A08", "AA01", 46, 0, 60, 0)   # 2 m gap
-#     # car9 = car("A09", "AA01", 55, 0, 35, 0)   # 9 m gap
-#     # car10 = car("A10", "AA01", 70, 0, 50, 0)  # 15 m gap
-#     # car11 = car("A11", "AA01", 72, 0, 15, 0)  # 2 m gap
-#     # car12 = car("A12", "AA01", 90, 0, 40, 0)  # 18 m gap
-
-
-
-
-#     # ROAD AA01 — 4 lanes, 60 m long
-
-#     # ROAD AA01 — 4 lanes, 60 m long
-
-#     # Lane 0: close following, mixed speeds
-#     car1 = car("A01", "AA01", 5, 0, 45, 0)
-#     car2 = car("A02", "AA01", 12, 0, 30, 0)   # 2.6 m gap
-#     car3 = car("A03", "AA01", 25, 0, 55, 0)   # 8.6 m gap
-
-#     # Lane 1: close following
-#     car4 = car("A04", "AA01", 8, 1, 25, 0)
-#     car5 = car("A05", "AA01", 16, 1, 40, 0)   # 3.6 m gap
-#     car6 = car("A06", "AA01", 30, 1, 35, 0)   # 9.6 m gap
-
-#     # Lane 2: mixed speeds and larger gaps
-#     car7 = car("A07", "AA01", 6, 2, 50, 0)
-#     car8 = car("A08", "AA01", 20, 2, 20, 0)   # 9.6 m gap
-
-#     # Lane 3: close following and free-flow car
-#     car9 = car("A09", "AA01", 10, 3, 35, 0)
-#     car10 = car("A10", "AA01", 18, 3, 55, 0)  # 3.6 m gap
-#     car11 = car("A11", "AA01", 40, 3, 30, 0)  # 17.6 m gap
-
-
-#     # ROAD BB01 — 2 lanes, 60 m long
-
-#     # Lane 0: close following, mixed speeds
-#     car12 = car("B01", "BB01", 4, 0, 50, 0)
-#     car13 = car("B02", "BB01", 11, 0, 25, 0)  # 2.6 m gap
-#     car14 = car("B03", "BB01", 24, 0, 40, 0)  # 8.6 m gap
-#     car15 = car("B04", "BB01", 42, 0, 55, 0)  # 13.6 m gap
-
-#     # Lane 1: moderate and large gaps
-#     car16 = car("B05", "BB01", 8, 1, 30, 0)
-#     car17 = car("B06", "BB01", 18, 1, 45, 0)  # 5.6 m gap
-#     car18 = car("B07", "BB01", 32, 1, 20, 0)  # 9.6 m gap
-#     car19 = car("B08", "BB01", 48, 1, 50, 0)  # 11.6 m gap
-#     # # print(ActiveCarsNow[1].car_id)
-#     road1.activeCarsList()
-#     road2.activeCarsList()
-#     # car1.carAheadGapFind()
-
-
-#     # print(road1.cars_data)
-
-#     for i in road1.cars_data[0]:
-#         print("Car Start")
-#         print(f"{i.car_id}, {i.lane_No}, position {i.X_position}, speed {i.current_speed}, acc {i.current_acceleration}, driver {i.driving_style}")
-#         (i.carAheadDataFind())
-#         (i.carAccelerate())
-#         print("Car Data New")
-#         print(f"{i.car_id}, {i.lane_No}, position {i.X_position}, speed {i.current_speed}, acc {i.current_acceleration}")
-#         print()
-
-#     for i in road1.cars_data[1]:
-#         print(i.car_id, i.lane_No, i.X_position)
-
-
-
-#     for i in range(15):
-#         car1 = car()
-#         # print(car1.max_speed, car1.max_acceleration, car1.max_braking, car1.car_priority,car1.driving_style,car1.reaction_time)
-#         print(vars(car1))
-
-
-
-
-#     car("A02", "AA01", 12, 0, 6, 0)

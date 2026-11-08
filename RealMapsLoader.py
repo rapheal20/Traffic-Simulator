@@ -17,7 +17,7 @@ projectedGraph = ox.project_graph(graph)
 
 
 # print(nodes)
-print((projectedGraph.edges(data=True)))
+# print((projectedGraph.edges(data=True)))
 
 #.nodes gives a dict with all the node ids and their data
 #if we use data=True then its a dict with data else just a list of node ids
@@ -54,7 +54,7 @@ scale = min(((ScreenWidth - (2*margin))/mapWidth), ((ScreenHeight - (2*margin))/
 #calculates number of pixels that represent 1 m
 # uses the smaller one to avoid any distortion
 
-print(scale)
+# print(scale)
 # scale = 5
 screen_nodes = {}
 '''
@@ -122,6 +122,6 @@ for u, v, data in projectedGraph.edges(data=True):
             FinalLaneCounts[name] = MostCommonLanes
 
 
-print(FinalLaneCounts)
+# print(FinalLaneCounts)
 
 
