@@ -23,4 +23,7 @@ driverConstants = [
          }
 ]
 
-AvailableDestinations = ['W', 'X', 'Y', 'Z']
+DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
+    'motorway': 100, 'trunk': 80, 'primary': 60,
+    'secondary': 50, 'tertiary': 40, 'residential': 30,
+}

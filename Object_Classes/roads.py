@@ -4,28 +4,19 @@ class roads():
 
 
     def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec, normal, startNode, endNode):
-        #road orientation 0 means road is horizontal, 1 means road is vertical
         self.road_id = roadID
         self.coordinates = coordinates #list of tuple
         self.lenght = roadLength #real
         self.lanes = round(lanes,0) #integer
-        # self.orientation = orientation #integer
         self.speed_limit = speedLimit #integer
         self.oneway = oneway #Boolean
         self.UnitVector = unitVec
         self.NormalVector = normal
         self.StartNode = startNode
         self.EndNode = endNode
-        # self.osmid = osmid
-        # self.locations = locationsAvailable #list (represents spawns and destinations both)
-        # self.is_traffic_light = trafficLight #real
-        # self.nodes = nodes
-        #dictionary, {"NO1" : 25} 25 tell node is at 25m into the road
-
 
         self.cars_data = [[] for _ in range(self.lanes)]
-        # self.activeCarsList()
-        # self.activeNodesList()
+
 
         ActiveRoadsList[self.road_id] = self
 
@@ -72,24 +63,3 @@ class roads():
                             self.cars_data[laneNumber].insert(0,ActiveCarsNow[i])
                 else:   #followed is the lsit is empty, jsut appends it
                     self.cars_data[laneNumber].append(ActiveCarsNow[i])
-
-
-    
-
-
-
-
-
-
-
-    
-        
-# list = [[] for _ in range(3)]
-# list[0].append('car1')
-# list[0].append('car2')
-# list[1].append('car2')
-
-# print(list[0][1])
-
-        
-

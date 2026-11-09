@@ -8,8 +8,10 @@ import numpy as np
 import uuid
 import sys
 import random
+import re
 
 from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
+from Simulation import DEFAULT_LIMITS
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 from Object_Classes.car import car
@@ -68,8 +70,29 @@ for u, v, data in projectedGraph.edges(data=True):
         #Linear Algebra concept
         start_pos = screen_nodes[u][0]
         end_pos = screen_nodes[v][0]
+        
+        
+        def findSpeedLimit(data):
+            speedlimit = data.get('maxspeed', None)
+            if isinstance(speedlimit, list):
+                speedlimit = speedlimit[0]
+            
+            if speedlimit:
+                if speedlimit.endswith("mph"):
+                    speed = re.search(r"\d+", speedlimit)
+                    speedLimit_KMH = round(float(speed.group(0)) * 1.6)
+            else:
+                roadtype = data.get('highway')
+                if isinstance(roadtype, list):
+                    roadtype = roadtype[0]
+                speedLimit_KMH = DEFAULT_LIMITS.get(roadtype, 40)
 
-        speedlimit = data.get('maxspeed', False)
+            return speedLimit_KMH
+
+
+        Speed_Limit_KMH = findSpeedLimit(data)
+        # print(speedLimit_KMH)
+        # sys.exit()
 
         #np.array converts it into vector
         vector1 = np.array(start_pos, dtype=float)
@@ -110,7 +133,7 @@ for u, v, data in projectedGraph.edges(data=True):
             roadLength= length,
             lanes= LaneNo,
             oneway= oneway,
-            speedLimit= speedlimit,
+            speedLimit= Speed_Limit_KMH,
             unitVec= UnitVector,
             normal=normal,
             startNode=u,
@@ -157,7 +180,7 @@ for RoadId, RoadData in ActiveRoadsList.items():
 #     print(ID, "=", Data,"\n")
 
 # print(ActiveNodesDict[42428283].RoadNo, ActiveNodesDict[42428283].Connections)
-# print()
+print(AvailableLocations)
 
 #Initializing cars
 while len(ActiveCarsNow) != 10:
@@ -411,7 +434,7 @@ while running:
                 carObj.carAheadDataFind()
                 carObj.carAccelerate(dt*0.02)
                 carObj.turn()
-    print(ActiveCarsNow)
+    # print(ActiveCarsNow)
 
 
 pygame.quit()

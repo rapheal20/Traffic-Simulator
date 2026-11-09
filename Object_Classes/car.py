@@ -37,19 +37,6 @@ from Simulation import *
 from heapq import heappush, heapify, heappop
 import heapq
 import sys
-# from OSM_Upgrade_Visualiser import carlength
-
-
-
-# graph = {
-#     "N01" : {"N02" :"AA01", "N03":"BB01"},
-#     "N02" : {"N05" :"BB03", "N07" : "BB03"},
-#     "N03" : {"N04" :"AA02", "N05":'AA02'},
-#     "N04" : {"N05" :"AA02", "N06":"BB02"},
-#     "N05" : {"N07" :"BB03"},
-#     "N06" : {"N07" :"AA03"},
-#     "N07" : {}
-# }
 
 
 class car():
@@ -122,8 +109,9 @@ class car():
         
     def carAheadDataFind(self):
         roadData = ActiveRoadsList[self.current_road]
-        #gets the lis tof cars on the road
+        roadLimit = ActiveRoadsList[self.current_road].speed_limit
         laneData = roadData.cars_data[self.lane_No]
+
         # from that 2d list takes the data for that specific lane
         numberOfCars = len(laneData)
         #finds the number of cars on that lane
@@ -140,12 +128,12 @@ class car():
         # target_turn_distance = self.roadRoute.get(self.current_road, roadData.lenght)
         target_turn_distance = roadData.lenght
         
-        if not currentCarId:
+        if currentCarId is None:
             gap = target_turn_distance - self.X_position
-            return {'Speed' : 60, 'Gap': gap}
+            return {'Speed' : roadLimit, 'Gap': gap}
 
         currentCarXpos = laneData[currentCarId].X_position 
-        if i != 0:
+        if currentCarId != 0:
             carAheadXpos = laneData[currentCarId-1].X_position 
             carAheadLen = laneData[currentCarId-1].car_length
             
@@ -153,7 +141,7 @@ class car():
             carAheadSpeed = laneData[currentCarId-1].current_speed
         else:
             gap = target_turn_distance - currentCarXpos
-            carAheadSpeed = 60
+            carAheadSpeed = roadLimit
 
         return {'Speed' : carAheadSpeed, 'Gap': gap}
         #if there is no car ahead of a car it calculates the gap from the end of the road
@@ -184,7 +172,6 @@ class car():
             Updated_Data = self.Acceleration_Working(aheadSpeed,
                                                     targetSpeedMultiplier,
                                                     'BRAKING_CONSTANT',
-                                                    self.max_braking,
                                                     timeframe
                                                     )
             # print(gap, self.safety_margin)
@@ -210,7 +197,6 @@ class car():
             Updated_Data = self.Acceleration_Working(aheadSpeed,
                                                         targetSpeedMultiplier,
                                                         'ACC_CONSTANT',
-                                                        self.max_acceleration,
                                                         timeframe
                                                         )
             # print(gap, self.safety_margin)
@@ -218,27 +204,13 @@ class car():
             self.current_acceleration = Updated_Data['Acc']
             self.X_position += Updated_Data['Distance']
 
-        else:
-        
-            ''' ###### MAINTAIN ###### '''
-            # print("maintain")
-            targetSpeedMultiplier = round(random.uniform(0.98, 1.02),3)
-
-            #uses acceleration constant
-            Updated_Data = self.Acceleration_Working(aheadSpeed,
-                                                        targetSpeedMultiplier,
-                                                        'ACC_CONSTANT',
-                                                        self.max_acceleration,
-                                                        timeframe
-                                                        )
-            # print(gap, self.safety_margin)
-            self.current_speed = Updated_Data['Speed']
-            self.current_acceleration = Updated_Data['Acc']
-            self.X_position += Updated_Data['Distance']
-
-    def Acceleration_Working(self, CarAheadSpeed, SpeedMultiplier, constantStype, operationType, timeframe):
+    def Acceleration_Working(self, CarAheadSpeed, SpeedMultiplier, constantStype, timeframe):
         #this gives the randomized target speed
         targetSpeed = CarAheadSpeed * SpeedMultiplier
+        roadLimit = ActiveRoadsList[self.current_road].speed_limit
+        limit_SI = min(self.max_speed, roadLimit) / 3.6
+        targetSpeed = min(targetSpeed, limit_SI)
+        
         #defined in Simulation.py, this is a driver property whch tells how much to accelerate per timeframe
         acc_contant = driverConstants[self.driving_style][constantStype]
 
@@ -249,20 +221,13 @@ class car():
 
         #based on the current frame target speed the acceleration required
         requiredAcceleration = (frameTargetSpeed - currentSpeedSI)/timeframe
+        requiredAcceleration = max(-self.max_braking, min(self.max_acceleration, requiredAcceleration))
 
-        #checks if the acceleration is more then that the car can handle, if so then the required acceleration is the maximum supported by the car
-        
-        if requiredAcceleration > operationType:
-            requiredAcceleration = operationType
-
-        #updates the speed, acceleration and position
-        newSpeed = frameTargetSpeed*3.6 #converted back into KmH
-        newAcc = requiredAcceleration
-
-        # calculating distance travelled
+        newSpeedSI = max(0.0, currentSpeedSI + requiredAcceleration * timeframe)
         distance_travelled = currentSpeedSI * timeframe + 0.5 * requiredAcceleration * timeframe**2
-        return {'Speed' : round(newSpeed,3), 
-                'Acc' : round(newAcc,3),
+        
+        return {'Speed' : round(newSpeedSI * 3.6,3), 
+                'Acc' : round(requiredAcceleration,3),
                 'Distance' : round(distance_travelled,3)}
     
     def pathFinder(self, graph, start, destination):
