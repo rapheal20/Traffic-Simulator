@@ -1,4 +1,5 @@
 import random
+import math
 from dataclasses import dataclass  #used to make record datatype
 
 @dataclass(frozen=True) #frozen makes it read only
@@ -62,23 +63,57 @@ class Car:
 
 
     # -------------- PHYSICS --------------
-    def free_acceleration(self, v0):
-        return self.profile.a * (1 - (self.v / v0) ** 4)
+    def IDM_acceleration(self, v0, gap=None, leader_v=0.0):
+        '''
+        v0 = desired speed
+        gap = bumper to bumper distance btw leader, None if no leader
+        leader_v = leader`s speed, ignored when gap is None
+        '''
+        Car_Profile = self.profile
+        free_term = 1 - (self.v / v0) ** 4      
+        """
+        scaling multiplier for the vehicles max acceleration
+        if self.v = 0 then it give 1, so the multiplier is 1 ie 100%
+        if self.v = v0 then it gives 0, so multiplier is 0, and v is maintained
+        if self.v > v0 then it gives a negative value, the vehicle decelearates
+        exponent 4, for a smooth transition
+        """
 
-    def step(self, dt, limit_kmh):
+        if gap is None: #open road, sets speed based on desired speed
+            return Car_Profile.a * free_term
+
+        dv = self.v - leader_v
+        s_star = (Car_Profile.s0 + self.v * Car_Profile.T + 
+                  (self.v * dv) / (2 * math.sqrt(Car_Profile.a * Car_Profile.b)))
+        '''
+        s_star = desired gap the driver wants to keep
+        s0 = minimum gap to be maintained always
+        self.v * Car_Profile.T = distance covered in T sec, time based buffer
+        self.v * dv = dynamic interaction term
+        if vehicle ahead is slower, dv is +ve so this term increases the desired gap to prepare for braking
+        (self.v * dv) / (2 * math.sqrt(Car_Profile.a * Car_Profile.b)) = calculates the extra space needed if a slower car is being approached 
+        2 * math.sqrt(Car_Profile.a * Car_Profile.b) = scales it for gentle braking and acc
+        '''
+        s_star = max(s_star, Car_Profile.s0)       #to ensure its never less then minimum gap
+        gap = max(gap, 0.1)     #to avoid division by 0, if cars touch   
+
+        return Car_Profile.a * (free_term - (s_star / gap) ** 2)
+        '''
+        the comfortable acc of the driver
+        from the free road acc the interaction term is subtracted to get the resulting acc
+        square to mimic the human scaling
+        '''
+
+    def step(self, dt, limit_kmh, gap=None, leader_v=0.0):
         v0 = self.desired_speed(limit_kmh)
 
-        a = self.free_acceleration(v0)
-        a = max(-self.max_brake, a)     #no braking harder then what physics allow
+        a = self.IDM_acceleration(v0, gap, leader_v)
+        a = max(-self.max_brake, a)     #apply braking limit
 
-        new_v = max(0.0, self.v + a * dt)   #never reverse
-        self.x += (self.v + new_v) / 2 * dt     #average speed * time
+        new_v = max(0.0, self.v + a * dt)
+        self.x += (self.v + new_v) / 2 * dt
         self.a = (new_v - self.v) / dt
-        self.v = (new_v)
-
-
-
-
+        self.v = new_v
 
 
 
@@ -86,12 +121,14 @@ class Car:
 if __name__ == "__main__":
     rng = random.Random(2)
     car = Car("c1", length=4.5, route=["R1"])
+    car.v = 50 / 3.6
 
     LIMIT = 50          # km/h
     DT = 0.1
-    t = 0.0
-    while t < 40:
-        car.step(DT, LIMIT)
-        t += DT
-        if round(t, 1) % 5 == 0:
-            print(f"style={car.style} t={t:4.1f}s  v={car.speed_kmh:5.1f} km/h  a={car.a:5.2f}  x={car.x:6.1f} m")
+    leader_x, leader_len, leader_v = 200.0, 4.5, 0.0
+    
+    for i in range(1, 401):
+        gap = (leader_x - leader_len) - car.x
+        car.step(DT, LIMIT, gap=gap, leader_v=leader_v)
+        if i % 20 == 0: #every 2 sec
+            print(f"style={car.style} t={i*DT:4.1f}s  v={car.speed_kmh:5.1f} km/h  a={car.a:5.2f}  gap={gap:6.1f} m")
