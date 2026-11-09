@@ -59,7 +59,6 @@ class car():
         self.car_id = carID
         self.car_length = carLenght
 
-
         #Car Physical properties
         max_speed_list = [120, 130, 140, 150, 160, 170, 180]
         self.max_speed = max_speed_list[random.randint(0, 6)]
@@ -110,11 +109,12 @@ class car():
         if self.route:
             print("route found")
             self.roadRoute = self.roadPath(graph)
-            ActiveCarsNow.append(self)
+            if self.roadRoute and self.roadRoute[0] == self.current_road:
+                ActiveCarsNow.append(self)
+            else:
+                print("Bad route")
         else:
             print("NP")
-
-        
 
     def minGapCalc(self):
         speed = self.current_speed/3.6        
@@ -271,12 +271,9 @@ class car():
             inf = sys.maxsize
             for node in graph.keys():
                 NodeDist[node] = {"cost" : inf, "pred" : ""}
-            
+        
             NodeDist[start]['cost'] = 0
-
             VisitedNodes = []
-            tempSRC = start
-            steps = len(graph) - 1 #it takes n-1 steps to complete
             min_heap = []  
             heappush(min_heap, (0, start))
             while min_heap:
@@ -293,16 +290,7 @@ class car():
                     for j in graph[currentNode]:
                         if j not in VisitedNodes:
                             roadName = (graph[currentNode][j])
-                            
-                            
-                            if currentNode == ActiveRoadsList[roadName].StartNode and j == ActiveRoadsList[roadName].EndNode:
-                                dist = abs(ActiveRoadsList[roadName].StartNode - ActiveRoadsList[roadName].EndNode)
-                                #here it subtracts the distance of 2 nodes on the road to get the actual distance
-                            else:
-                                dist = ActiveRoadsList[roadName].lenght
-                                #if both the nodes are not on the same road them it uses the lenght of the road as the distance
-                            
-                            
+                            dist = ActiveRoadsList[roadName].lenght
                             cost = currentCost + dist
                             if cost < NodeDist[j]['cost']:
                                 NodeDist[j]['cost'] = cost #reassigns when the cost is lower
@@ -324,51 +312,39 @@ class car():
         #list of all the roadIds the car needs to travel
         route = self.route
         transition = []
-        # currentNode = route[0] 
         for i in range(len(route)-1):
-            currentNode = route[i]
-            nextNode = route[i+1]
-            # gets the dictionary at currentNode, if not found default {}
-            # from that dict gets the roadID of the next node
-            # roadID = graph.get(currentNode, {}).get(nextNode)
-            roadID = graph[currentNode][nextNode]
-
-            # if roadID and roadID in ActiveRoadsList:
+            roadID = graph[route[i]].get(route[i+1])
+            if roadID is None:
+                return None
             transition.append(roadID)
         return transition
-
     # def compulsoryBraking(self):
 
     def turn(self):
         roadRoute = (self.roadRoute)
         roadID = self.current_road
+        roadLen = ActiveRoadsList[roadID].lenght
         
-        if roadID == self.destinationList[1] and abs(self.X_position - self.destinationList[2]) < 6:
-            print("Reached")
-            # if self in ActiveCarsNow:
-            ActiveCarsNow.remove(self)
+        if roadID == self.destinationList[1] and self.X_position >= self.destinationList[2] - 5:
+            if self in ActiveCarsNow:
+                print("deleting")
+                ActiveCarsNow.remove(self)
+            return
 
 
-        elif abs(self.X_position - ActiveRoadsList[roadID].lenght) < 5:
-
-            print(roadRoute)
-            print(roadID)
+        elif self.X_position >= roadLen - 5:
             currentIndex = roadRoute.index(roadID)            
             if currentIndex+1 < len(roadRoute):
                 next_road = roadRoute[currentIndex+1]
-
-                if self.current_road != next_road:
-                    self.current_road = next_road
-                    startPos = 0.0
-                    laneNumbers = ActiveRoadsList[next_road].lanes
-                    NewLane = random.randint(0, laneNumbers-1)
-
-                    self.lane_No = NewLane
-                    self.X_position = startPos
-                    # print(self.current_road)
-                    print("Turning")
-            # else: 
-                
+                overshoot = max(0.0, self.X_position - roadLen)
+                self.current_road = next_road
+                self.X_position = overshoot
+                self.lane_No = random.randint(0, int(ActiveRoadsList[next_road].lanes)-1)
+                print("Turning")
+            else: 
+                if self in ActiveCarsNow:
+                    ActiveCarsNow.remove(self)
+            
 
         # elif abs(self.X_position - roadRoute.get(roadID)) < 10:
         #             # car slows down

@@ -7,18 +7,12 @@ import statistics as st
 import numpy as np
 import uuid
 import sys
-
-pygame.init()
+import random
 
 from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
-# Conversion: 1m = 5px
-
-
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 from Object_Classes.car import car
-# import ObjectCreations
-
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 
 # CONSTANTS
@@ -35,9 +29,9 @@ SCREEN_WIDTH = 1366
 BG_COLOR = (227, 227, 227)     # Dark gray background
 GRID_COLOR = (182, 182, 182)    #light gray
 CELL_SIZE = 50
+
+pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
-
-
 clock = pygame.time.Clock()
 elapsed = 0
 
@@ -58,26 +52,19 @@ MAX_ZOOM = 5.0
 carWidth = 2
 carlength = 4.5
 
-import random
 running = True
 mapSaved = False
 
 AvailableLocations = []
+PathFindingGraph = {}
 # MAP SAVING
 for u, v, data in projectedGraph.edges(data=True):
-
     # Make sure both ends of the road exist in our screen dictionary
     if u in screen_nodes and v in screen_nodes:
         name = data.get('name')
         if isinstance(name,list):
             name = name[0]
         LaneNo = FinalLaneCounts.get(name)
-
-        # name = data.get('name')
-
-        # if name not in colouring.keys():
-        #     colouring[name] = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
-
         #Linear Algebra concept
         start_pos = screen_nodes[u][0]
         end_pos = screen_nodes[v][0]
@@ -97,7 +84,6 @@ for u, v, data in projectedGraph.edges(data=True):
 
         rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
         normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
-
 
         oneway = data.get('oneway', True)
         if not oneway:
@@ -145,11 +131,6 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
             if laneNo > maxLanes:
                 maxLanes = laneNo
                 mainRoad = roadID
-
-        #if a node only connects to a single road then it will be considered for spawning
-        # if roadNum < 2:
-        #     AvailableLocations[nodeID] = "Node"
-       
         nodes(
             ID=nodeID,
             coordinates=coordinates,
@@ -160,7 +141,6 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
             mainRoad= mainRoad
         )
 
-PathFindingGraph = {}
 for RoadId, RoadData in ActiveRoadsList.items():
     u = RoadData.StartNode
     v = RoadData.EndNode
@@ -169,20 +149,18 @@ for RoadId, RoadData in ActiveRoadsList.items():
     else:
         PathFindingGraph[u][v] = RoadId
 
-print(PathFindingGraph)
+# print(PathFindingGraph)
     # print(RoadId, "=", RoadData.StartNode, RoadData.EndNode, "\n")
 
 
 # for ID,Data in PathFindingGraph.items():
 #     print(ID, "=", Data,"\n")
 
-
-
 # print(ActiveNodesDict[42428283].RoadNo, ActiveNodesDict[42428283].Connections)
 # print()
 
 #Initializing cars
-while len(ActiveCarsNow) != 1:
+while len(ActiveCarsNow) != 10:
     NoOfLocations = len(AvailableLocations) - 1
     spawnIndex = random.randint(1,NoOfLocations)
     destinationIndex = random.randint(1,NoOfLocations)
@@ -192,14 +170,8 @@ while len(ActiveCarsNow) != 1:
     spawn = AvailableLocations[spawnIndex]
     destination = AvailableLocations[destinationIndex]
 
-    # if AvailableLocations[spawn] == "Edge":
     Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
-    # spawnList = [spawn, Xpos,0]
-
     destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght)),0 ]
-
-# print(spawn, destination)
-
     car(
         graph=PathFindingGraph,
         carID=str(uuid.uuid4()),
@@ -212,7 +184,7 @@ while len(ActiveCarsNow) != 1:
         destinationList=destinationData,
         carLenght=carlength
     )
-    # print(len(ActiveCarsNow))
+
 # sys.exit()
 
 while running:
@@ -387,6 +359,7 @@ while running:
     # print(ActiveCarsNow)
     for carObj in ActiveCarsNow:
         carRoad = carObj.current_road
+        # print(len(carObj.roadRoute))
         # print(carObj.current_road)  
         # if not carRoad or carRoad not in ActiveRoadsList:
         #     continue
@@ -438,6 +411,7 @@ while running:
                 carObj.carAheadDataFind()
                 carObj.carAccelerate(dt*0.02)
                 carObj.turn()
+    print(ActiveCarsNow)
 
 
 pygame.quit()
