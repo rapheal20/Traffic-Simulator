@@ -18,7 +18,10 @@ PROFILES = {
 
 
 class Car:
-    def __init__(self, car_id, length, route, max_brake=8.0, rng=None):
+    def __init__(self, car_id, length, route, max_brake=8.0, rng=None,
+                 lane=0, start_x=0.0, start_speed_kmh=0.0,
+                 dest_road=None, dest_x=None):
+            
         self.id = car_id
         self.length = length #m
         self.rng = rng or random.Random()   #this creates a random seed, generates the randomness
@@ -40,12 +43,14 @@ class Car:
         #trip
         self.route = route      #list of all the road ids
         self.route_index = 0
+        self.dest_road = dest_road      #end road
+        self.dest_x = dest_x        #end road location
 
         #current state
-        self.x = 0.0    #front bumber distance from start of road
-        self.v = 0.0
+        self.x = start_x    #front bumber distance from start of road
+        self.v = start_speed_kmh / 3.6
         self.a = 0.0
-        self.lane = 0
+        self.lane = lane
 
         self.finished = False
 
@@ -60,7 +65,6 @@ class Car:
 
     def desired_speed(self, limit_Kmh):
         return min(self.max_speed, limit_Kmh/3.6 * self.profile.speed_factor)
-
 
     # -------------- PHYSICS --------------
     def IDM_acceleration(self, v0, gap=None, leader_v=0.0):
@@ -104,16 +108,43 @@ class Car:
         square to mimic the human scaling
         '''
 
-    def step(self, dt, limit_kmh, gap=None, leader_v=0.0):
+    def compute_acceleration(self, limit_kmh, gap=None, leader_v=0.0):
+        #this function only decides but doesnt change anything
         v0 = self.desired_speed(limit_kmh)
-
         a = self.IDM_acceleration(v0, gap, leader_v)
         a = max(-self.max_brake, a)     #apply braking limit
+        return a
 
+    def apply(self, a, dt):
+        #moves the cars
         new_v = max(0.0, self.v + a * dt)
         self.x += (self.v + new_v) / 2 * dt
         self.a = (new_v - self.v) / dt
         self.v = new_v
+
+    def step(self, dt, limit_kmh, gap=None, leader_v=0.0):
+        self.apply(self.compute_acceleration(limit_kmh, gap, leader_v), dt)
+
+    def update_route(self, roads):
+        #roads is ActiveRoadList
+        #either completes the trip or gets onto the next road
+
+        #if reached the destination
+        if (self.road_id == self.dest_road 
+                and self.dest_x is not None
+                    and self.x >= self.dest_x):
+            self.finished = True
+            return
+
+        while self.x >= roads[self.road_id].lenght:
+            self.x -= roads[self.road_id].lenght
+            if self.route_index + 1 >= len(self.route):
+                self.finished = True
+                return
+            self.route_index += 1
+            self.lane = min(self.lane, int(roads[self.road_id].lanes)-1)
+            
+
 
 
 

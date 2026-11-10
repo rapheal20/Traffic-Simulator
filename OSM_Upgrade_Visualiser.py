@@ -14,9 +14,9 @@ from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 from Simulation import DEFAULT_LIMITS
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
-from Object_Classes.car import car
+# from Object_Classes.car import car
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
-
+from Object_Classes.IDM_Car import Car
 # CONSTANTS
 SCALE_PER_M = 5
 LANE_WIDTH = 3.6 #in meters
@@ -180,8 +180,21 @@ for RoadId, RoadData in ActiveRoadsList.items():
 #     print(ID, "=", Data,"\n")
 
 # print(ActiveNodesDict[42428283].RoadNo, ActiveNodesDict[42428283].Connections)
-print(AvailableLocations)
+# print(AvailableLocations)
+def find_road_route(graph, roads, start_node, end_node):
+    print()
 
+def spawn_car(cars, graph, car_id, road_id, x, lane, speed_kmh,
+                spawn_node, destination, length, rng):
+    dest_node, dest_road, dest_x = destination
+    route = find_road_route(graph, ActiveRoadsList, spawn_node, dest_node)
+    if not route or route[0] != road_id:
+        return None
+    car = Car(car_id, length, route, rng=rng, lane=lane, start_x=x,
+                start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x)
+    cars.append(car)
+    return car
+    
 #Initializing cars
 while len(ActiveCarsNow) != 10:
     NoOfLocations = len(AvailableLocations) - 1
@@ -194,21 +207,24 @@ while len(ActiveCarsNow) != 10:
     destination = AvailableLocations[destinationIndex]
 
     Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
-    destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght)),0 ]
-    car(
-        graph=PathFindingGraph,
-        carID=str(uuid.uuid4()),
-        roadID=spawn,
-        X_pos=Xpos,
-        laneNO=0,
-        speed=random.randint(1,15),
-        acc=random.uniform(0, 2.4),
-        spawn=ActiveRoadsList[spawn].StartNode,
-        destinationList=destinationData,
-        carLenght=carlength
-    )
+    destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
+
+    spawn_car(cars=ActiveCarsNow,
+              graph=PathFindingGraph,
+              car_id=str(uuid.uuid4()),
+              road_id=spawn,
+              x=Xpos,
+              lane=0,
+              speed_kmh=30,
+              spawn_node=ActiveRoadsList[spawn].StartNode,
+              destination=destinationData,
+              length=4.5,
+              rng= random.randint()
+                )
 
 # sys.exit()
+accumulator = 0.0
+SIM_SPEED = 1.0
 
 while running:
     for event in pygame.event.get():
@@ -259,7 +275,12 @@ while running:
             #camera_X is the offset
             #the subtraction is for the pan and then division factors in the zoom
 
-    dt = clock.tick(60) / 1000
+    DT = 0.1
+    frame_time = clock.tick(60) / 1000.0
+    accumulator += min(frame_time, 0.25) * SIM_SPEED
+    while accumulator >= DT:
+        simulation_step(ActiveCarsNow, DT)
+        accumulator -= DT
     
     def drawGrid():
         current_Cell_Size = CELL_SIZE * zoom_scale
@@ -380,6 +401,30 @@ while running:
     #     else:
 
     # print(ActiveCarsNow)
+    
+
+    def SortInLanes(ActiveCarsNow):
+        #clears all the lanes
+        for road in ActiveRoadsList:
+            road.cars_data = [[] for _ in range(road.lanes)]
+
+        #adds all the cars into their own road and lane
+        for car in ActiveCarsNow:
+            ActiveRoadsList[car.road_id].cars_data[car.lane].append(car)
+    
+        for road in ActiveRoadsList.values():
+            for lane in road.cars_data:
+                lane.sort(key=lambda c: c.x, reverse=True)
+                #reverse so that index 0 is the car furthest away
+
+    def FindLeader(lane, i):
+        if i == 0:
+            return None, 0.0
+        lead = lane[i - 1]
+        c = lane[i]
+        gap = (lead.x - lead.length) - c.x
+        return gap, lead.v
+
     for carObj in ActiveCarsNow:
         carRoad = carObj.current_road
         # print(len(carObj.roadRoute))
@@ -425,16 +470,23 @@ while running:
     #updates the display
     pygame.display.flip()
 
-    # print("Simulation Updates")
-    for roadObj in ActiveRoadsList.values():
-        roadObj.activeCarsList()
-        for i in range(roadObj.lanes):
-            # print(roadObj.cars_data[i])
-            for carObj in roadObj.cars_data[i]:
-                carObj.carAheadDataFind()
-                carObj.carAccelerate(dt*0.02)
-                carObj.turn()
-    # print(ActiveCarsNow)
+    def simulation_step(cars, dt):
+        SortInLanes(ActiveCarsNow)
+
+        #deciding phase
+        decisions = []
+        for road in ActiveRoadsList.values():
+            for lane in road.cars_data:
+                for i, carOBJ in enumerate(lane):
+                    gap , leader_v = FindLeader(lane, i)
+                    decisions.append(carOBJ, carOBJ.compute_acceleration(road.speed_limit, gap, leader_v))
+
+        for car, a in decisions:
+            car.apply(a, dt)
+            car.update_route(ActiveRoadsList)
+
+        cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
+        # print(ActiveCarsNow)
 
 
 pygame.quit()
