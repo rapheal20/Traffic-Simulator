@@ -37,6 +37,10 @@ class Car:
             speed_factor= base.speed_factor * self.rng.uniform(0.85, 1.15),
         ) #adds a randomness in the preset values
 
+        #Lane Changing
+        self.lane_cooldown = 0.0
+        self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
+
         self.max_speed = (self.rng.choice([120, 130, 140, 150, 160, 170, 180])) / 3.6 #m/s
         self.max_brake = max_brake 
 
