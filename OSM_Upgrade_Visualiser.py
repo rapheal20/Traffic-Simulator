@@ -17,13 +17,13 @@ from Object_Classes.nodes import nodes
 # from Object_Classes.car import car
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.IDM_Car import Car
+from Object_Classes.Router import Router
 # CONSTANTS
 SCALE_PER_M = 5
 LANE_WIDTH = 3.6 #in meters
 DASHES_WIDTH = 0.15 #in meters
 DASH_length = 3
 GAP_length = 3
-# VScale = scale
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -58,7 +58,6 @@ running = True
 mapSaved = False
 
 AvailableLocations = []
-PathFindingGraph = {}
 # MAP SAVING
 for u, v, data in projectedGraph.edges(data=True):
     # Make sure both ends of the road exist in our screen dictionary
@@ -164,30 +163,13 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
             mainRoad= mainRoad
         )
 
-for RoadId, RoadData in ActiveRoadsList.items():
-    u = RoadData.StartNode
-    v = RoadData.EndNode
-    if PathFindingGraph.get(u) == None:
-        PathFindingGraph[u] = {v:RoadId}
-    else:
-        PathFindingGraph[u][v] = RoadId
-
-# print(PathFindingGraph)
-    # print(RoadId, "=", RoadData.StartNode, RoadData.EndNode, "\n")
+router = Router(ActiveRoadsList)
 
 
-# for ID,Data in PathFindingGraph.items():
-#     print(ID, "=", Data,"\n")
-
-# print(ActiveNodesDict[42428283].RoadNo, ActiveNodesDict[42428283].Connections)
-# print(AvailableLocations)
-def find_road_route(graph, roads, start_node, end_node):
-    print()
-
-def spawn_car(cars, graph, car_id, road_id, x, lane, speed_kmh,
+def spawn_car(cars, car_id, road_id, x, lane, speed_kmh,
                 spawn_node, destination, length, rng):
     dest_node, dest_road, dest_x = destination
-    route = find_road_route(graph, ActiveRoadsList, spawn_node, dest_node)
+    route = router.route(spawn_node, dest_node, 0)
     if not route or route[0] != road_id:
         return None
     car = Car(car_id, length, route, rng=rng, lane=lane, start_x=x,
@@ -210,7 +192,6 @@ while len(ActiveCarsNow) != 10:
     destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
 
     spawn_car(cars=ActiveCarsNow,
-              graph=PathFindingGraph,
               car_id=str(uuid.uuid4()),
               road_id=spawn,
               x=Xpos,
@@ -219,7 +200,7 @@ while len(ActiveCarsNow) != 10:
               spawn_node=ActiveRoadsList[spawn].StartNode,
               destination=destinationData,
               length=4.5,
-              rng= random.randint()
+              rng= random.randint(-1000, 1000)
                 )
 
 # sys.exit()
@@ -417,12 +398,26 @@ while running:
                 lane.sort(key=lambda c: c.x, reverse=True)
                 #reverse so that index 0 is the car furthest away
 
-    def FindLeader(lane, i):
-        if i == 0:
+    def FindLeader(car, lane, i, road):
+        #same road same lane
+        if i > 0:
+            lead = lane[i - 1]
+            gap = (lead.x - lead.length) - car.x
+            return gap, lead.v
+
+        #next road of the route
+        next_id = car.next_road_id
+        if next_id is None:
             return None, 0.0
-        lead = lane[i - 1]
-        c = lane[i]
-        gap = (lead.x - lead.length) - c.x
+
+        next_Road = ActiveRoadsList[next_id]
+        next_Lane = min(car.lane, int(next_Road.lanes) - 1)
+        cars_There = next_Road.cars_data[next_Lane]
+        if not cars_There:
+            return None, 0.0
+
+        lead = cars_There[-1]
+        gap = (road.lenght - car.x) + (lead.x - lead.length)
         return gap, lead.v
 
     for carObj in ActiveCarsNow:
@@ -478,7 +473,7 @@ while running:
         for road in ActiveRoadsList.values():
             for lane in road.cars_data:
                 for i, carOBJ in enumerate(lane):
-                    gap , leader_v = FindLeader(lane, i)
+                    gap , leader_v = FindLeader(carOBJ, lane, i, road)
                     decisions.append(carOBJ, carOBJ.compute_acceleration(road.speed_limit, gap, leader_v))
 
         for car, a in decisions:

@@ -30,10 +30,10 @@ class Car:
         self.style = self.rng.randint(0, 2)
         base = PROFILES[self.style]
         self.profile = DriverProfile(
-            a= base.a * self.rng.uniform(0.85, 1.15),
-            b= base.b * self.rng.uniform(0.85, 1.15),
-            T= base.T * self.rng.uniform(0.85, 1.15),
-            s0= base.s0 * self.rng.uniform(0.85, 1.15),
+            a= base.a * self.rng.uniform(0.95, 1.05),
+            b= base.b * self.rng.uniform(0.95, 1.05),
+            T= base.T * self.rng.uniform(0.95, 1.05),
+            s0= base.s0 * self.rng.uniform(0.95, 1.05),
             speed_factor= base.speed_factor * self.rng.uniform(0.85, 1.15),
         ) #adds a randomness in the preset values
 
@@ -65,6 +65,12 @@ class Car:
 
     def desired_speed(self, limit_Kmh):
         return min(self.max_speed, limit_Kmh/3.6 * self.profile.speed_factor)
+
+    @property
+    def next_road_id(self):
+        if self.route_index + 1 < (len(self.route)):
+            return self.route[self.route_index +1]
+        return None
 
     # -------------- PHYSICS --------------
     def IDM_acceleration(self, v0, gap=None, leader_v=0.0):
