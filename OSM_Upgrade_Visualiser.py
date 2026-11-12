@@ -41,6 +41,19 @@ MAX_ZOOM = 5.0
 
 carWidth = 2
 carlength = 4.5
+DRIVE_SIDE = +1 #left hand traffic
+
+def carriageway_width_m(lanes):
+    return lanes * LANE_WIDTH + (lanes - 1) * DASHES_WIDTH
+
+def carriageway_shift_m(road):
+    if road.oneway:
+        return 0.0
+    return DRIVE_SIDE * carriageway_width_m(road.lanes)/2
+
+def lane_center_offset_m(road, lane):
+    width  = carriageway_width_m(road.lanes)
+    return (lane * (LANE_WIDTH + DASHES_WIDTH) + LANE_WIDTH/2 - width / 2 + carriageway_shift_m(road))
 
 running = True
 mapSaved = False
@@ -68,20 +81,15 @@ for u, v, data in projectedGraph.edges(data=True):
         rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
         normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
 
-        name = data.get('name')
-        if isinstance(name,list):
-            name = name[0]
-        LaneNo = FinalLaneCounts.get(name)
-
         def findSpeedLimit(data):
             speedlimit = data.get('maxspeed', None)
             if isinstance(speedlimit, list):
                 speedlimit = speedlimit[0]
             
             if speedlimit:
-                if speedlimit.endswith("mph"):
-                    speed = re.search(r"\d+", speedlimit)
-                    speedLimit_KMH = round(float(speed.group(0)) * 1.6)
+                speed = re.search(r"\d+", str(speedlimit))
+                value = float(speed.group(0)) if speed else 40
+                speedLimit_KMH = round(value * 1.6) if "mph" in str(speedlimit) else round(value)
             else:
                 roadtype = data.get('highway')
                 if isinstance(roadtype, list):
@@ -94,9 +102,20 @@ for u, v, data in projectedGraph.edges(data=True):
         Speed_Limit_KMH = findSpeedLimit(data)
 
         oneway = data.get('oneway', True)
-        if not oneway:
-            if LaneNo % 2 != 0:
-                LaneNo += 1
+
+        name = data.get('name')
+        if isinstance(name,list):
+            name = name[0]
+        raw = FinalLaneCounts.get(name)
+
+        # raw = data.get("lanes")
+        if isinstance(raw, list):
+            raw = raw[0]
+        try:
+            total = int(raw)
+        except:
+            total = LaneNo or 1
+        LaneNo = max(1, total) if oneway else max(1, (total + 1)//2)
 
         uniqueID = str(uuid.uuid4())
 
@@ -135,7 +154,8 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
         maxLanes = 0
         
         for roadID in connectedroads:
-            laneNo = (int(ActiveRoadsList[roadID].lanes))
+            road = ActiveRoadsList[roadID]
+            laneNo = road.lanes if road.oneway else road.lanes * 2
             if laneNo > maxLanes:
                 maxLanes = laneNo
                 mainRoad = roadID
@@ -219,7 +239,8 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 500:
+    while len(ActiveCarsNow) != 100:
+
         NoOfLocations = len(AvailableLocations) - 1
         spawnIndex = random.randint(1,NoOfLocations)
         destinationIndex = random.randint(1,NoOfLocations)
@@ -290,6 +311,10 @@ while running:
             # we need the normal as to draw out the thickness of our roads we need the exact perpendicualr of its direction
             # does the dot multiplication rotates it by 90 degree
 
+            shift_px = carriageway_shift_m(roadData) * scale
+            screen1 = screen1 + normal * shift_px
+            screen2 = screen2 + normal * shift_px
+
             roadWidth = (LaneNo * LANE_WIDTH * scale) + ((LaneNo - 1) * dashPixelWidth)
             # nodeBuffer = bufferArea * scale
             halfWidth = roadWidth/2
@@ -318,6 +343,11 @@ while running:
             #     pygame.draw.polygon(surface=screen, color=(255, 0, 0), points=PolygonCords)
             # pygame.draw.polygon(surface=screen, color=colouring[roadData.osmid], points=PolygonCords)
             pygame.draw.polygon(surface=screen, color=(25,25,25), points=PolygonCords)
+
+            if not roadData.oneway:
+                c1 = trimmedP1 - normal * shift_px
+                c2 = trimmedP2 - normal * shift_px
+                pygame.draw.line(screen, (230,200,40), tuple(c1), tuple(c2))
 
             dashlength = DASH_length * scale
             dashGap = GAP_length * scale
@@ -389,7 +419,8 @@ while running:
         carWorldPos = p1World + (unitVector * carObj.x)
 
         LaneNo = roadData.lanes
-        LaneOffset = (carObj.lane - (LaneNo - 1)/2.0) * LANE_WIDTH
+        # LaneOffset = (carObj.lane - (LaneNo - 1)/2.0) * LANE_WIDTH
+        LaneOffset = lane_center_offset_m(roadData, carObj.lane)
         CarCenterWorld = carWorldPos + (normal * LaneOffset)
 
 

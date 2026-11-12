@@ -45,22 +45,24 @@ class Router:
                     came_from[v] = (u, road_id)
                     heapq.heappush(heap, (new_cost, v))
 
-            if end_node not in came_from: #unreachable, heap emptied without ever reaching
-                return None
+        if end_node not in came_from: #unreachable, heap emptied without ever reaching
+            return None
 
-            path, node = [], end_node
-            while node != start_node:
-                node, road_id = came_from[node]
-                path.append(road_id)
-            return path[::-1] #remakes the list in reverse so that they in travel order
+        path, node = [], end_node
+        while node != start_node:
+            node, road_id = came_from[node]
+            path.append(road_id)
+        return path[::-1] #remakes the list in reverse so that they in travel order
 
     def route(self, start_road, dest_road, prefernce):
         if start_road == dest_road:
             return [start_road]
 
-        a = self.roads[start_road].EndNode
-        b = self.roads[dest_road].StartNode
-        middle = self._roads_between(a, b, prefernce)
+        a = self.roads[start_road]
+        b = self.roads[dest_road]
+        middle = self._roads_between(a.EndNode, b.StartNode, prefernce)
         if middle is None:
             return None
+        if not middle and a.StartNode == b.EndNode and a.EndNode == b.StartNode:
+            return None #stops an instand U-turn
         return [start_road] + middle + [dest_road]

@@ -1,6 +1,4 @@
 import osmnx as ox
-import networkx as g
-import pandas as pd
 import statistics as st
 
 

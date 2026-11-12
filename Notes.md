@@ -283,7 +283,7 @@ Recalculate route with Dijkstra
     <!-- Implement car properties -->
     <!-- Implement driver properties -->
     <!-- Implement vehicle properties -->
-    Implement route/destination data
+    <!-- Implement route/destination data -->
     Implement car priority
 <!-- 5. Basic Car Physics -->
     <!-- Implement acceleration -->
@@ -316,23 +316,23 @@ Recalculate route with Dijkstra
     <!-- Detect road endings -->
     <!-- Determine next road -->
     <!-- Move cars between roads -->
-    Preserve/update lane
+    <!-- Preserve/update lane -->
     <!-- Detect destination arrival -->
-10. Pathfinding & Routing
+<!-- 10. Pathfinding & Routing -->
     <!-- Implement graph representation -->
     <!-- Implement Dijkstra -->
     <!-- Implement distance-based routing -->
-    Implement time-based routing
-    Implement routing preferences
-    Implement route tracking
-11. Lane Changing
-    Detect when lane change is needed
-    Select target lane
-    Check surrounding cars
-    Calculate safe gaps
-    Execute lane change
-    Implement overtaking
-    Handle simultaneous lane changes
+    <!-- Implement time-based routing -->
+    <!-- Implement routing preferences -->
+    <!-- Implement route tracking -->
+<!-- 11. Lane Changing -->
+    <!-- Detect when lane change is needed -->
+    <!-- Select target lane -->
+    <!-- Check surrounding cars -->
+    <!-- Calculate safe gaps -->
+    <!-- Execute lane change -->
+    <!-- Implement overtaking -->
+    <!-- Handle simultaneous lane changes -->
 12. Merging
     Detect merge situations
     Find gaps
@@ -345,14 +345,14 @@ Recalculate route with Dijkstra
     Implement emergency vehicle priority
     Control intersection access
     Handle intersection collisions
-14. Spawning & Despawning
-    Create spawn points
-    Implement weighted spawning
-    Generate random car properties
-    Generate destinations
-    Spawn replacement cars
+<!-- 14. Spawning & Despawning -->
+    <!-- Create spawn points -->
+    <!-- Implement weighted spawning -->
+    <!-- Generate random car properties -->
+    <!-- Generate destinations -->
+    <!-- Spawn replacement cars -->
     <!-- Despawn completed cars -->
-    Implement safe spawning
+    <!-- Implement safe spawning -->
 15. Congestion System
     Calculate road density
     Calculate average road speed
