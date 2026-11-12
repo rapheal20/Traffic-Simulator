@@ -1,3 +1,5 @@
+from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
+
 # CONSTANTS
 SCALE_PER_M = 5
 LANE_WIDTH = 3.6 #in meters
@@ -5,6 +7,7 @@ DASHES_WIDTH = 0.15 #in meters
 DASH_length = 3
 GAP_length = 3
 
+DT = 0.1
 #LANE CHANGING CONST.
 LANE_SAFE_BRAKE = 4.0   #max braking to impose on new follower
 LANE_GAIN = 0.3     #minimum benefit to change lane
@@ -19,7 +22,8 @@ DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
 
 
 
-def SortInLanes(ActiveRoadsList, ActiveCarsNow):
+
+def SortInLanes(ActiveCarsNow):
     #clears all the lanes
     for roadOBJ in ActiveRoadsList.values():
         roadOBJ.cars_data = [[] for _ in range(roadOBJ.lanes)]
@@ -33,7 +37,7 @@ def SortInLanes(ActiveRoadsList, ActiveCarsNow):
             lane.sort(key=lambda c: c.x, reverse=True)
             #reverse so that index 0 is the car furthest away
 
-def FindLeader(ActiveRoadsList ,car, lane, i, road):
+def FindLeader(car, lane, i, road):
     #same road same lane
     if i > 0:
         lead = lane[i - 1]
@@ -54,7 +58,6 @@ def FindLeader(ActiveRoadsList ,car, lane, i, road):
     lead = cars_There[-1]
     gap = (road.lenght - car.x) + (lead.x - lead.length)
     return gap, lead.v
-
     
 def gap_between(rear, front):
     return ((front.x - front.length) - rear.x)
@@ -123,3 +126,35 @@ def try_lane_change(car, road):
         target_lane.insert(index, car)
         car.lane = best_target
         car.lane_cooldown = LANE_COOLDOWN
+
+def simulation_step(cars, dt, t):
+    # t = current simulation time in sec
+    SortInLanes(ActiveCarsNow)
+
+    for car in cars:
+        car.lane_cooldown = max(0.0, car.lane_cooldown - dt)
+
+    for road in ActiveRoadsList.values():
+        if len(road.cars_data) < 2:
+            continue
+        movers = [c for lane in road.cars_data for c in lane] #makes a list of all the cars
+        for c in movers:
+            if c.lane_cooldown == 0.0:
+                try_lane_change(c, road)
+    #deciding phase
+    decisions = []
+    for road in ActiveRoadsList.values():
+        for lane in road.cars_data:
+            for i, carOBJ in enumerate(lane):
+                gap , leader_v = FindLeader(carOBJ, lane, i, road)
+                car.observe(t, gap, leader_v)
+                per_gap, per_leader_v = car.perceived()
+                if gap is not None and gap < car.profile.s0:
+                    per_gap, per_leader_v = gap, leader_v
+                decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, per_gap, per_leader_v)))
+
+    for car, a in decisions:
+        car.apply(a, dt)
+        car.update_route(ActiveRoadsList)
+
+    cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished

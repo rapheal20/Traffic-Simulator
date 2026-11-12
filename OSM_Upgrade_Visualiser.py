@@ -13,7 +13,6 @@ from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 from Simulation import *
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
-# from Object_Classes.car import car
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.IDM_Car import Car
 from Object_Classes.Router import Router
@@ -28,16 +27,12 @@ CELL_SIZE = 50
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
 clock = pygame.time.Clock()
-elapsed = 0
 
 # PANNING
-camera_X = 0
+camera_X = 0    #anchors of the screen
 camera_Y = 0
 is_dragging = False
-last_mouse_pos = (0,0)  
-#camera_X and camera_Y are the anchors of the screen
-#they are used to find out how far adn where the screen is dragged
-#last_mouse_pos keeps the last postion of the mouse to calculaet the change  
+last_mouse_pos = (0,0)      #last postion of the mouse to calculaet the change  
 
 #ZOOM
 zoom_scale = 1.0
@@ -77,9 +72,7 @@ for u, v, data in projectedGraph.edges(data=True):
         if isinstance(name,list):
             name = name[0]
         LaneNo = FinalLaneCounts.get(name)
-        
-        
-        
+
         def findSpeedLimit(data):
             speedlimit = data.get('maxspeed', None)
             if isinstance(speedlimit, list):
@@ -99,8 +92,6 @@ for u, v, data in projectedGraph.edges(data=True):
 
 
         Speed_Limit_KMH = findSpeedLimit(data)
-        # print(speedLimit_KMH)
-        # sys.exit()
 
         oneway = data.get('oneway', True)
         if not oneway:
@@ -136,7 +127,6 @@ for u, v, data in projectedGraph.edges(data=True):
         )
 
 for nodeID, nodeData in projectedGraph.nodes(data=True):
-    # print(nodeID, nodeData)
     if nodeID in screen_nodes:
         coordinates = screen_nodes[nodeID][0]
         roadNum = screen_nodes[nodeID][1]
@@ -175,6 +165,7 @@ def spawn_car(cars, car_id, road_id, x, lane, speed_kmh,
 
 
 # sys.exit()
+sim_time = 0.0
 accumulator = 0.0
 SIM_SPEED = 5.0
 
@@ -228,7 +219,7 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 100:
+    while len(ActiveCarsNow) != 500:
         NoOfLocations = len(AvailableLocations) - 1
         spawnIndex = random.randint(1,NoOfLocations)
         destinationIndex = random.randint(1,NoOfLocations)
@@ -255,39 +246,11 @@ while running:
                 )
 
 
-
-    def simulation_step(cars, dt):
-        SortInLanes(ActiveRoadsList, ActiveCarsNow)
-
-        for car in cars:
-            car.lane_cooldown = max(0.0, car.lane_cooldown - dt)
-
-        for road in ActiveRoadsList.values():
-            if len(road.cars_data) < 2:
-                continue
-            movers = [c for lane in road.cars_data for c in lane] #makes a list of all the cars
-            for c in movers:
-                if c.lane_cooldown == 0.0:
-                    try_lane_change(c, road)
-        #deciding phase
-        decisions = []
-        for road in ActiveRoadsList.values():
-            for lane in road.cars_data:
-                for i, carOBJ in enumerate(lane):
-                    gap , leader_v = FindLeader(ActiveRoadsList, carOBJ, lane, i, road)
-                    decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, gap, leader_v)))
-
-        for car, a in decisions:
-            car.apply(a, dt)
-            car.update_route(ActiveRoadsList)
-
-        cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
-
-    DT = 0.1
     frame_time = clock.tick(60) / 1000.0
     accumulator += min(frame_time, 0.25) * SIM_SPEED
     while accumulator >= DT:
-        simulation_step(ActiveCarsNow, DT)
+        simulation_step(ActiveCarsNow, DT, sim_time)
+        sim_time += DT
         accumulator -= DT
 
     def drawGrid():

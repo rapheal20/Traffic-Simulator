@@ -1,5 +1,6 @@
 import random
 import math
+from collections import deque
 from dataclasses import dataclass  #used to make record datatype
 
 @dataclass(frozen=True) #frozen makes it read only
@@ -37,9 +38,7 @@ class Car:
             speed_factor= base.speed_factor * self.rng.uniform(0.85, 1.15),
         ) #adds a randomness in the preset values
 
-        #Lane Changing
-        self.lane_cooldown = 0.0
-        self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
+        
 
         self.max_speed = (self.rng.choice([120, 130, 140, 150, 160, 170, 180])) / 3.6 #m/s
         self.max_brake = max_brake 
@@ -57,6 +56,14 @@ class Car:
         self.lane = lane
 
         self.finished = False
+
+        #reaction time with style
+        self.reaction_time = self.rng.uniform(0.3, 0.6) * (1 * self.style * 0.6) #range from 0.3 to 1.3ss
+        self.history = deque()
+        #self.history appends the current observation, the head is the newest observation that is atleast reaction_time old
+        #Lane Changing
+        self.lane_cooldown = 0.0
+        self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
 
     # -------------- HELPERS --------------
     @property #this allows us to make get the value without using a varibale
@@ -152,8 +159,20 @@ class Car:
                 self.finished = True
                 return
             self.route_index += 1
+            self.history.clear() #clears the observations for the car for the previous road
             self.lane = min(self.lane, int(roads[self.road_id].lanes)-1)
-            
+
+    def observe(self, t, gap, leader_v):
+        self.history.append((t, gap, leader_v))
+        cutoff = t - self.reaction_time
+
+        while len(self.history) > 1 and self.history[1][0] <= cutoff:
+            self.history.popleft()
+
+    def perceived(self):
+        #reaction of driver based on observation from reaction time
+        _, gap, leader_v = self.history[0]
+        return gap, leader_v
 
 
 
