@@ -1,4 +1,3 @@
-
 import pygame
 import math
 from collections import Counter
@@ -11,25 +10,13 @@ import random
 import re
 
 from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
-from Simulation import DEFAULT_LIMITS
+from Simulation import *
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 # from Object_Classes.car import car
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.IDM_Car import Car
 from Object_Classes.Router import Router
-# CONSTANTS
-SCALE_PER_M = 5
-LANE_WIDTH = 3.6 #in meters
-DASHES_WIDTH = 0.15 #in meters
-DASH_length = 3
-GAP_length = 3
-
-#LANE CHANGING CONST.
-LANE_SAFE_BRAKE = 4.0   #max braking to impose on new follower
-LANE_GAIN = 0.3     #minimum benefit to change lane
-LANE_COOLDOWN = 5.0
-
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -68,13 +55,29 @@ AvailableLocations = []
 for u, v, data in projectedGraph.edges(data=True):
     # Make sure both ends of the road exist in our screen dictionary
     if u in screen_nodes and v in screen_nodes:
+        #Linear Algebra concept
+        start_pos = screen_nodes[u][0]
+        end_pos = screen_nodes[v][0]
+        
+        #np.array converts it into vector
+        vector1 = np.array(start_pos, dtype=float)
+        vector2 = np.array(end_pos, dtype=float)
+
+        #vector subtraction so each element is subtracted from its corresponding element
+        direction = vector2 - vector1
+
+        # calculates its euclidean length, basically the hypotneous of it
+        length = round(np.linalg.norm(direction),0)
+        UnitVector = direction/length
+
+        rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
+        normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
+
         name = data.get('name')
         if isinstance(name,list):
             name = name[0]
         LaneNo = FinalLaneCounts.get(name)
-        #Linear Algebra concept
-        start_pos = screen_nodes[u][0]
-        end_pos = screen_nodes[v][0]
+        
         
         
         def findSpeedLimit(data):
@@ -99,20 +102,6 @@ for u, v, data in projectedGraph.edges(data=True):
         # print(speedLimit_KMH)
         # sys.exit()
 
-        #np.array converts it into vector
-        vector1 = np.array(start_pos, dtype=float)
-        vector2 = np.array(end_pos, dtype=float)
-
-        #vector subtraction so each element is subtracted from its corresponding element
-        direction = vector2 - vector1
-
-        # calculates its euclidean length, basically the hypotneous of it
-        length = round(np.linalg.norm(direction),0)
-        UnitVector = direction/length
-
-        rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
-        normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
-
         oneway = data.get('oneway', True)
         if not oneway:
             if LaneNo % 2 != 0:
@@ -129,8 +118,9 @@ for u, v, data in projectedGraph.edges(data=True):
 
 
         #if the road has a single lane it is considered minor and will be used for spawing cars
-        if LaneNo < 2:
-            AvailableLocations.append(uniqueID)
+        if LaneNo < 2 or data.get('highway') != "motorway":
+            if length >= 20:
+                AvailableLocations.append(uniqueID)
             
         roads(
             roadID= uniqueID,
@@ -182,81 +172,6 @@ def spawn_car(cars, car_id, road_id, x, lane, speed_kmh,
                 start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x)
     cars.append(car)
     return car
-    
-def gap_between(rear, front):
-    return ((front.x - front.length) - rear.x)
-
-def neighbours_in_lane(lane_list, x):
-    leader = follower = None
-    for other in lane_list:
-        if other.x > x:
-            leader = other  #updates to the closest car ahead
-        else:
-            follower = other    #first car behind the car
-            break
-    return leader, follower
-
-def try_lane_change(car, road):
-    lanes = road.cars_data
-    limit = road.speed_limit
-    current_lane = lanes[car.lane]
-    i = current_lane.index(car) #index of car in the current lane
-
-    if i > 0:
-        gap = gap_between(car, current_lane[i-1])
-        leader_v = current_lane[i-1].v
-    else:
-        gap, leader_v = None, 0.0
-
-    a_now = car.compute_acceleration(limit, gap, leader_v)
-
-    best_target = None
-    best_score = LANE_GAIN
-    for target in (car.lane-1, car.lane+1): #iterates through the neighbouring lanes
-        if target < 0 or target >= len(lanes):  #checks if the lanes exit
-            continue
-        leader, follower = neighbours_in_lane(lanes[target], car.x)
-
-        if leader:
-            gap2, leader_v2 = gap_between(car, leader), leader.v
-            if gap2 < car.profile.s0:   #if gap is less then minimum bumper gap fir th edriver
-                continue
-        else:
-            gap2 , leader_v2 = None, 0.0
-
-        a_new = car.compute_acceleration(limit, gap2, leader_v2)
-
-        loss = 0.0
-        if follower:
-            gap_follower = gap_between(follower, car)
-            if gap_follower < follower.profile.s0:
-                continue
-            if leader:
-                a_follower_before = follower.compute_acceleration(limit, gap_between(follower, leader), leader_v)
-            else:
-                a_follower_before = follower.compute_acceleration(limit)
-            a_follower_after = follower.compute_acceleration(limit, gap_follower, car.v)
-            if a_follower_after < -LANE_SAFE_BRAKE:
-                continue
-            loss = max(0.0, a_follower_before - a_follower_after)
-        score = (a_new - a_now) - car.politeness * loss
-        if score > best_score:
-            best_target, best_score = target, score
-
-    if best_target is not None:
-        current_lane.remove(car)
-        target_lane = lanes[best_target]
-        index = sum(1 for o in target_lane if o.x > car.x)
-        target_lane.insert(index, car)
-        car.lane = best_target
-        car.lane_cooldown = LANE_COOLDOWN
-
-
-
-
-
-
-
 
 
 # sys.exit()
@@ -324,13 +239,14 @@ while running:
         destination = AvailableLocations[destinationIndex]
 
         Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
+        lane = random.choice([0 , ActiveRoadsList[spawn].lanes - 1])
         destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
 
         spawn_car(cars=ActiveCarsNow,
                 car_id=str(uuid.uuid4()),
                 road_id=spawn,
                 x=Xpos,
-                lane=0,
+                lane=lane,
                 speed_kmh=30,
                 dest_road=destinationData[1],
                 dest_x=destinationData[2],
@@ -341,7 +257,7 @@ while running:
 
 
     def simulation_step(cars, dt):
-        SortInLanes(ActiveCarsNow)
+        SortInLanes(ActiveRoadsList, ActiveCarsNow)
 
         for car in cars:
             car.lane_cooldown = max(0.0, car.lane_cooldown - dt)
@@ -358,7 +274,7 @@ while running:
         for road in ActiveRoadsList.values():
             for lane in road.cars_data:
                 for i, carOBJ in enumerate(lane):
-                    gap , leader_v = FindLeader(carOBJ, lane, i, road)
+                    gap , leader_v = FindLeader(ActiveRoadsList, carOBJ, lane, i, road)
                     decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, gap, leader_v)))
 
         for car, a in decisions:
@@ -366,42 +282,6 @@ while running:
             car.update_route(ActiveRoadsList)
 
         cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
-
-    def SortInLanes(ActiveCarsNow):
-        #clears all the lanes
-        for roadOBJ in ActiveRoadsList.values():
-            roadOBJ.cars_data = [[] for _ in range(roadOBJ.lanes)]
-
-        #adds all the cars into their own road and lane
-        for car in ActiveCarsNow:
-            ActiveRoadsList[car.road_id].cars_data[car.lane].append(car)
-    
-        for road in ActiveRoadsList.values():
-            for lane in road.cars_data:
-                lane.sort(key=lambda c: c.x, reverse=True)
-                #reverse so that index 0 is the car furthest away
-
-    def FindLeader(car, lane, i, road):
-        #same road same lane
-        if i > 0:
-            lead = lane[i - 1]
-            gap = (lead.x - lead.length) - car.x
-            return gap, lead.v
-
-        #next road of the route
-        next_id = car.next_road_id
-        if next_id is None:
-            return None, 0.0
-
-        next_Road = ActiveRoadsList[next_id]
-        next_Lane = min(car.lane, int(next_Road.lanes) - 1)
-        cars_There = next_Road.cars_data[next_Lane]
-        if not cars_There:
-            return None, 0.0
-
-        lead = cars_There[-1]
-        gap = (road.lenght - car.x) + (lead.x - lead.length)
-        return gap, lead.v
 
     DT = 0.1
     frame_time = clock.tick(60) / 1000.0
