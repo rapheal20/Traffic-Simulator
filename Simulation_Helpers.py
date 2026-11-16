@@ -1,7 +1,14 @@
 import osmnx as ox
+
+ox.settings.use_cache = False
+ox.settings.log_console = False
+#to stop it from writing cache into restructed dir(for executable)
+
 import statistics as st
 import numpy as np
 import re
+import os
+import sys
 import random
 import uuid
 from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
@@ -36,9 +43,18 @@ DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
     'secondary': 50, 'tertiary': 40, 'residential': 30,
 }
 
+def resource_path(relative_path):
+  base_path = getattr(sys, '_MEIPASS', os.path.abspath('.'))
+  return os.path.join(base_path, relative_path)
+
+
 def Make_Map(coordinates, radius):
-    graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
+    # graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
+    
+    graph = ox.load_graphml(resource_path('nyc_map.graphml')) #do avoid a crash in exe
     projectedGraph = ox.project_graph(graph) #converts the graph form latitide and longitude to XY coordiantes(needed for pygames)
+    
+    
     minX, minY = float('inf'), float('inf') #gives the valueof infinity
     maxX, maxY = float('-inf'),float('-inf')
     for node_id, data in projectedGraph.nodes(data=True):
