@@ -1,18 +1,12 @@
 import pygame
-import math
-from collections import Counter
-import osmnx as ox
-import statistics as st
 import numpy as np
 import uuid
 import sys
 import random
-import re
 
-from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
-from Simulation import *
-from Object_Classes.roads import roads
-from Object_Classes.nodes import nodes
+
+# from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
+from Simulation_Helpers import *
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.IDM_Car import Car
 from Object_Classes.Router import Router
@@ -40,144 +34,11 @@ zoom_scale = 1.0
 MIN_ZOOM = 0.2
 MAX_ZOOM = 5.0
 
-carWidth = 2
-carlength = 4.5
-DRIVE_SIDE = +1 #left hand traffic
-
-def carriageway_width_m(lanes):
-    return lanes * LANE_WIDTH + (lanes - 1) * DASHES_WIDTH
-
-def carriageway_shift_m(road):
-    if road.oneway:
-        return 0.0
-    return DRIVE_SIDE * carriageway_width_m(road.lanes)/2
-
-def lane_center_offset_m(road, lane):
-    width  = carriageway_width_m(road.lanes)
-    return (lane * (LANE_WIDTH + DASHES_WIDTH) + LANE_WIDTH/2 - width / 2 + carriageway_shift_m(road))
-
 running = True
 mapSaved = False
 
-AvailableLocations = []
-# MAP SAVING
-for u, v, data in projectedGraph.edges(data=True):
-    # Make sure both ends of the road exist in our screen dictionary
-    if u in screen_nodes and v in screen_nodes:
-        #Linear Algebra concept
-        start_pos = screen_nodes[u][0]
-        end_pos = screen_nodes[v][0]
-        
-        #np.array converts it into vector
-        vector1 = np.array(start_pos, dtype=float)
-        vector2 = np.array(end_pos, dtype=float)
-
-        #vector subtraction so each element is subtracted from its corresponding element
-        direction = vector2 - vector1
-
-        # calculates its euclidean length, basically the hypotneous of it
-        length = round(np.linalg.norm(direction),0)
-        UnitVector = direction/length
-
-        rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
-        normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
-
-        def findSpeedLimit(data):
-            speedlimit = data.get('maxspeed', None)
-            if isinstance(speedlimit, list):
-                speedlimit = speedlimit[0]
-            
-            if speedlimit:
-                speed = re.search(r"\d+", str(speedlimit))
-                value = float(speed.group(0)) if speed else 40
-                speedLimit_KMH = round(value * 1.6) if "mph" in str(speedlimit) else round(value)
-            else:
-                roadtype = data.get('highway')
-                if isinstance(roadtype, list):
-                    roadtype = roadtype[0]
-                speedLimit_KMH = DEFAULT_LIMITS.get(roadtype, 40)
-
-            return speedLimit_KMH
-
-
-        Speed_Limit_KMH = findSpeedLimit(data)
-
-        oneway = data.get('oneway', True)
-
-        name = data.get('name')
-        if isinstance(name,list):
-            name = name[0]
-        raw = FinalLaneCounts.get(name)
-
-        # raw = data.get("lanes")
-        if isinstance(raw, list):
-            raw = raw[0]
-        try:
-            total = int(raw)
-        except:
-            total = LaneNo or 1
-        LaneNo = max(1, total) if oneway else max(1, (total + 1)//2)
-
-        uniqueID = str(uuid.uuid4())
-
-        if u not in NodesforRoad:
-            NodesforRoad[u] = []
-        NodesforRoad[u].append(uniqueID)
-        if v not in NodesforRoad:
-            NodesforRoad[v] = []
-        NodesforRoad[v].append(uniqueID)
-
-
-        #if the road has a single lane it is considered minor and will be used for spawing cars
-        if LaneNo < 2 or data.get('highway') != "motorway":
-            if length >= 20:
-                AvailableLocations.append(uniqueID)
-            
-        roads(
-            roadID= uniqueID,
-            coordinates= [vector1,vector2],
-            roadLength= length,
-            lanes= LaneNo,
-            oneway= oneway,
-            speedLimit= Speed_Limit_KMH,
-            unitVec= UnitVector,
-            normal=normal,
-            startNode=u,
-            endNode=v
-        )
-
-for nodeID, nodeData in projectedGraph.nodes(data=True):
-    if nodeID in screen_nodes:
-        coordinates = screen_nodes[nodeID][0]
-        roadNum = screen_nodes[nodeID][1]
-        nodeType = nodeData.get('highway', None)
-        if isinstance(nodeType, list):
-            nodeType = 'traffic_signals' if 'traffic_signals' in nodeType else nodeType[0]
-        connectedroads = NodesforRoad[nodeID]
-        maxLanes = 0
-        
-        for roadID in connectedroads:
-            road = ActiveRoadsList[roadID]
-            laneNo = road.lanes if road.oneway else road.lanes * 2
-            if laneNo > maxLanes:
-                maxLanes = laneNo
-                mainRoad = roadID
-        nodes(
-            ID=nodeID,
-            coordinates=coordinates,
-            roads=roadNum,
-            type=nodeType,
-            connections=connectedroads,
-            maxLanes=maxLanes,
-            mainRoad= mainRoad
-        )
-
-for road in ActiveRoadsList.values():
-    buf = ActiveNodesDict[road.EndNode].MaxLanes * LANE_WIDTH/2 #same as trim, used to stop car before
-    road.stop_x = max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
-
-build_signals(ActiveRoadsList, ActiveNodesDict, random.Random(1))
-
+coordinates, radius = (40.7580, -73.9855), 400
+scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
 router = Router(ActiveRoadsList)
 
 

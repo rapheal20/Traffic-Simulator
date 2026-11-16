@@ -33,7 +33,7 @@
 
 import random
 from Active_Lists.ActiveList import ActiveCarsNow, ActiveRoadsList, ActiveNodesDict
-from Simulation import *
+from Simulation_Helpers import *
 from heapq import heappush, heapify, heappop
 import heapq
 import sys
