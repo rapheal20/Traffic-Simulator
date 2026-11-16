@@ -1,4 +1,5 @@
 from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
+from Object_Classes.TrafficLights import ActiveSignals
 
 # CONSTANTS
 SCALE_PER_M = 5
@@ -147,10 +148,15 @@ def simulation_step(cars, dt, t):
         for lane in road.cars_data:
             for i, carOBJ in enumerate(lane):
                 gap , leader_v = FindLeader(carOBJ, lane, i, road)
-                car.observe(t, gap, leader_v)
-                per_gap, per_leader_v = car.perceived()
-                if gap is not None and gap < car.profile.s0:
+                carOBJ.observe(t, gap, leader_v)
+                per_gap, per_leader_v = carOBJ.perceived()
+                if gap is not None and gap < carOBJ.profile.s0:
                     per_gap, per_leader_v = gap, leader_v
+
+                sig = signal_leader(car, road, t)
+                if sig is not None and (per_gap is None or sig[0] < per_gap):
+                    per_gap, per_leader_v = sig
+
                 decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, per_gap, per_leader_v)))
 
     for car, a in decisions:
@@ -158,3 +164,18 @@ def simulation_step(cars, dt, t):
         car.update_route(ActiveRoadsList)
 
     cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
+
+def signal_leader(car, road, t):
+    light = ActiveSignals.get(road.EndNode)
+    if light is None:
+        return None #checks for light at end, if no light then dosnt stop
+    state = light.state(road.road_id, t)
+    if state == 'green':
+        return None
+    dist = getattr(road, 'stop_x', road.lenght) - car.x #getattr reads by name and falls back to a default
+    if dist < 0.5:  #if its past this line then it just goes along to clear the juction
+        return None
+    if state == "yellow" and car.v **2/(2 * car.profile.b) > dist:  #if the car can stop comfortably then it stops else it goes through
+        # d = (v^2 / 2b)    uses kinematics formual to find the decelration needed
+        return None
+    return dist, 0.0

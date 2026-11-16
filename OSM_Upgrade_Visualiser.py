@@ -16,6 +16,7 @@ from Object_Classes.nodes import nodes
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.IDM_Car import Car
 from Object_Classes.Router import Router
+from Object_Classes.TrafficLights import ActiveSignals, build_signals
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -168,6 +169,12 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
             maxLanes=maxLanes,
             mainRoad= mainRoad
         )
+
+for road in ActiveRoadsList.values():
+    buf = ActiveNodesDict[road.EndNode].MaxLanes * LANE_WIDTH/2 #same as trim, used to stop car before
+    road.stop_x = max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
+
+build_signals(ActiveRoadsList, ActiveNodesDict, random.Random(1))
 
 router = Router(ActiveRoadsList)
 
@@ -403,6 +410,23 @@ while running:
 
     # print(ActiveCarsNow)
     
+    LIGHT_COL = {'green' : (0,200,0), "yellow" : (240, 190, 0), 'red':(220,0,0)}
+
+    for roadID, roadData in ActiveRoadsList.items():
+        light = ActiveSignals.get(roadData.EndNode)
+        if light is None or roadData.lenght < 10:
+            continue
+        unitVec = roadData.UnitVector
+        normal = roadData.NormalVector
+        endCord = roadData.coordinates[1]
+        buffer = ActiveNodesDict[roadData.EndNode].MaxLanes * LANE_WIDTH / 2
+        half = carriageway_width_m(roadData.lanes) / 2
+        centre = endCord - unitVec * buffer + normal * carriageway_shift_m(roadData)
+        a = (centre + normal * half) * scale + cameraOffset
+        b = (centre - normal * half) * scale + cameraOffset
+        pygame.draw.line(screen, LIGHT_COL[light.state(roadID, sim_time)], tuple(a), tuple(b), max(2, int(2 * scale)))
+
+
 
     for carObj in ActiveCarsNow:
         carRoad = carObj.road_id
