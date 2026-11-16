@@ -109,7 +109,7 @@ def try_lane_change(car, road):
             if gap_follower < follower.profile.s0:
                 continue
             if leader:
-                a_follower_before = follower.compute_acceleration(limit, gap_between(follower, leader), leader_v)
+                a_follower_before = follower.compute_acceleration(limit, gap_between(follower, leader), leader.v)
             else:
                 a_follower_before = follower.compute_acceleration(limit)
             a_follower_after = follower.compute_acceleration(limit, gap_follower, car.v)
@@ -153,14 +153,20 @@ def simulation_step(cars, dt, t):
                 if gap is not None and gap < carOBJ.profile.s0:
                     per_gap, per_leader_v = gap, leader_v
 
-                sig = signal_leader(car, road, t)
+                sig = signal_leader(carOBJ, road, t)
                 if sig is not None and (per_gap is None or sig[0] < per_gap):
                     per_gap, per_leader_v = sig
 
                 decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, per_gap, per_leader_v)))
 
     for car, a in decisions:
+        prev_x = car.x
         car.apply(a, dt)
+        road  = ActiveRoadsList[car.road_id]
+        light = ActiveSignals.get(road.EndNode)
+        stop = getattr(road, "stop_x", None)
+        if light and stop and prev_x < stop <= car.x and light.state(road.road_id, t) == "red":
+            print("RED RUN", car.id, f"{car.v*3.6:.0f} km/h")
         car.update_route(ActiveRoadsList)
 
     cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished

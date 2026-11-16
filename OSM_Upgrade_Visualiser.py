@@ -151,6 +151,8 @@ for nodeID, nodeData in projectedGraph.nodes(data=True):
         coordinates = screen_nodes[nodeID][0]
         roadNum = screen_nodes[nodeID][1]
         nodeType = nodeData.get('highway', None)
+        if isinstance(nodeType, list):
+            nodeType = 'traffic_signals' if 'traffic_signals' in nodeType else nodeType[0]
         connectedroads = NodesforRoad[nodeID]
         maxLanes = 0
         
