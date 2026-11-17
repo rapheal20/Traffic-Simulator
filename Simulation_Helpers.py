@@ -15,6 +15,8 @@ from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
 from Object_Classes.TrafficLights import ActiveSignals, build_signals
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
+from Object_Classes.IDM_Car import Car
+from Object_Classes.turn import lane_is_clear, allowed_lanes, lane_gap, entry_lane
 
 
 
@@ -32,6 +34,11 @@ LANE_SAFE_BRAKE = 4.0   #max braking to impose on new follower
 LANE_GAIN = 0.3     #minimum benefit to change lane
 LANE_COOLDOWN = 5.0
 
+#LANE CHANGE FOR TURN CONST.
+TURN_ZONE = 150.0   #distance where laen change begins for turn
+TURN_WEIGHT = 3.0   #benefot of being 1 lane closer
+LANE_COOLDOWN_TURN = 1.5    #shorter cooldown for turn lanechange
+
 carWidth = 2
 carlength = 4.5
 DRIVE_SIDE = +1 #left hand traffic
@@ -46,7 +53,6 @@ DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
 def resource_path(relative_path):
   base_path = getattr(sys, '_MEIPASS', os.path.abspath('.'))
   return os.path.join(base_path, relative_path)
-
 
 def Make_Map(coordinates, radius):
     # graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
@@ -263,7 +269,6 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
 
     return scale, AvailableLocations
 
-
 def SortInLanes(ActiveCarsNow):
     #clears all the lanes
     for roadOBJ in ActiveRoadsList.values():
@@ -291,7 +296,7 @@ def FindLeader(car, lane, i, road):
         return None, 0.0
 
     next_Road = ActiveRoadsList[next_id]
-    next_Lane = min(car.lane, int(next_Road.lanes) - 1)
+    next_Lane = entry_lane(car.next_turn, car.lane, int(next_Road.lanes))
     cars_There = next_Road.cars_data[next_Lane]
     if not cars_There:
         return None, 0.0
@@ -319,6 +324,10 @@ def try_lane_change(car, road):
     current_lane = lanes[car.lane]
     i = current_lane.index(car) #index of car in the current lane
 
+    allowed = allowed_lanes(len(lanes), car.next_turn)
+    urg = turn_urgency(car, road)
+    need_now = lane_gap(car.lane, allowed)  #0 = already in the lane
+
     if i > 0:
         gap = gap_between(car, current_lane[i-1])
         leader_v = current_lane[i-1].v
@@ -328,7 +337,12 @@ def try_lane_change(car, road):
     a_now = car.compute_acceleration(limit, gap, leader_v)
 
     best_target = None
-    best_score = LANE_GAIN
+    best_progress = 0
+
+    best_score = LANE_GAIN if (need_now == 0 or urg == 0.0) else 0.0
+    safe_brake = LANE_SAFE_BRAKE + 2.0 * urg    #accept rougher brake when time is short
+
+
     for target in (car.lane-1, car.lane+1): #iterates through the neighbouring lanes
         if target < 0 or target >= len(lanes):  #checks if the lanes exit
             continue
@@ -353,12 +367,14 @@ def try_lane_change(car, road):
             else:
                 a_follower_before = follower.compute_acceleration(limit)
             a_follower_after = follower.compute_acceleration(limit, gap_follower, car.v)
-            if a_follower_after < -LANE_SAFE_BRAKE:
+            if a_follower_after < -safe_brake:
                 continue
             loss = max(0.0, a_follower_before - a_follower_after)
-        score = (a_new - a_now) - car.politeness * loss
+
+        progress = need_now - lane_gap(target, allowed) 
+        score = (a_new - a_now) - car.politeness * loss + TURN_WEIGHT * urg * progress
         if score > best_score:
-            best_target, best_score = target, score
+            best_target, best_score, best_progress = target, score, progress
 
     if best_target is not None:
         current_lane.remove(car)
@@ -366,7 +382,8 @@ def try_lane_change(car, road):
         index = sum(1 for o in target_lane if o.x > car.x)
         target_lane.insert(index, car)
         car.lane = best_target
-        car.lane_cooldown = LANE_COOLDOWN
+        car.lane_cooldown = LANE_COOLDOWN_TURN if (best_progress > 0 and urg > 0) else LANE_COOLDOWN
+        car.history.clear()
 
 def simulation_step(cars, dt, t):
     # t = current simulation time in sec
@@ -437,6 +454,67 @@ def carriageway_shift_m(road):
 def lane_center_offset_m(road, lane):
     width  = carriageway_width_m(road.lanes)
     return (lane * (LANE_WIDTH + DASHES_WIDTH) + LANE_WIDTH/2 - width / 2 + carriageway_shift_m(road))
+
+def spawner(router, ActiveRoadsList, AvailableLocations):
+    NoOfLocations = len(AvailableLocations) - 1
+    spawnIndex = random.randint(1,NoOfLocations)
+    destinationIndex = random.randint(1,NoOfLocations)
+    while spawnIndex == destinationIndex:
+        destinationIndex = random.randint(1,NoOfLocations)
+
+    spawn = AvailableLocations[spawnIndex]
+    destination = AvailableLocations[destinationIndex]
+
+    Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
+    lane = random.choice([0 , ActiveRoadsList[spawn].lanes - 1])
+    if not lane_is_clear(ActiveCarsNow, spawn, lane, Xpos):
+        return
+
+    destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
+
+    spawn_car(
+            router=router,
+            cars=ActiveCarsNow,
+            car_id=str(uuid.uuid4()),
+            road_id=spawn,
+            x=Xpos,
+            lane=lane,
+            speed_kmh=30,
+            dest_road=destinationData[1],
+            dest_x=destinationData[2],
+            length=4.5,
+            rng= random.Random()
+            )
+
+def spawn_car(router, cars, car_id, road_id, x, lane, speed_kmh,
+                dest_road, dest_x, length, rng):
+    pref = rng.randint(0, 1)
+    route = router.route(road_id, dest_road, pref)
+    if route is None:
+        return None
+    car = Car(car_id, length, route, rng=rng, lane=lane, start_x=x,
+                start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x)
+    cars.append(car)
+    return car
+
+def turn_urgency(car, road):
+    #gives a score form 0.0 to 1.0, whowing how urgenty a car needs to merge into a turn lane
+    if car.next_turn not in ('left', 'right'):
+        return 0.0
+
+    stop_line = getattr(road, 'stop_x', road.lenght)
+
+    distance_to_turn = stop_line - car.x
+
+    if distance_to_turn < 0.0:
+        distance_to_turn = 0.0
+
+    if distance_to_turn >= TURN_ZONE:
+        return 0.0
+
+    urgency = 1.0 - (distance_to_turn / TURN_ZONE)
+    #as car gets closer inside TURN_ZONE, urgency rises
+    return urgency
 
 
 

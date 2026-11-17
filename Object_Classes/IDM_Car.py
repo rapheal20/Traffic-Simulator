@@ -2,6 +2,7 @@ import random
 import math
 from collections import deque
 from dataclasses import dataclass  #used to make record datatype
+from Object_Classes.turn import turn_kind, entry_lane
 
 @dataclass(frozen=True) #frozen makes it read only
 class DriverProfile:
@@ -54,6 +55,7 @@ class Car:
         self.v = start_speed_kmh / 3.6
         self.a = 0.0
         self.lane = lane
+        self.next_turn = None
 
         self.finished = False
 
@@ -142,6 +144,10 @@ class Car:
     def step(self, dt, limit_kmh, gap=None, leader_v=0.0):
         self.apply(self.compute_acceleration(limit_kmh, gap, leader_v), dt)
 
+    def refresh_turn(self, roads):
+        nextID = self.next_road_id
+        self.next_turn = None if nextID is None else turn_kind(roads[self.road_id], roads[nextID])
+
     def update_route(self, roads):
         #roads is ActiveRoadList
         #either completes the trip or gets onto the next road
@@ -158,9 +164,11 @@ class Car:
             if self.route_index + 1 >= len(self.route):
                 self.finished = True
                 return
+            turn = self.next_turn
             self.route_index += 1
             self.history.clear() #clears the observations for the car for the previous road
-            self.lane = min(self.lane, int(roads[self.road_id].lanes)-1)
+            self.lane = entry_lane(turn, self.lane, int(roads[self.road_id].lanes))
+            self.refresh_turn(roads)
 
     def observe(self, t, gap, leader_v):
         self.history.append((t, gap, leader_v))

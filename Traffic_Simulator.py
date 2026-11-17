@@ -41,19 +41,6 @@ coordinates, radius = (40.7580, -73.9855), 400
 scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
 router = Router(ActiveRoadsList)
 
-
-def spawn_car(cars, car_id, road_id, x, lane, speed_kmh,
-                dest_road, dest_x, length, rng):
-    pref = rng.randint(0, 1)
-    route = router.route(road_id, dest_road, pref)
-    if route is None:
-        return None
-    car = Car(car_id, length, route, rng=rng, lane=lane, start_x=x,
-                start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x)
-    cars.append(car)
-    return car
-
-
 # sys.exit()
 sim_time = 0.0
 accumulator = 0.0
@@ -110,32 +97,7 @@ while running:
 
     #Initializing cars
     while len(ActiveCarsNow) != 100:
-
-        NoOfLocations = len(AvailableLocations) - 1
-        spawnIndex = random.randint(1,NoOfLocations)
-        destinationIndex = random.randint(1,NoOfLocations)
-        while spawnIndex == destinationIndex:
-            destinationIndex = random.randint(1,NoOfLocations)
-
-        spawn = AvailableLocations[spawnIndex]
-        destination = AvailableLocations[destinationIndex]
-
-        Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
-        lane = random.choice([0 , ActiveRoadsList[spawn].lanes - 1])
-        destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
-
-        spawn_car(cars=ActiveCarsNow,
-                car_id=str(uuid.uuid4()),
-                road_id=spawn,
-                x=Xpos,
-                lane=lane,
-                speed_kmh=30,
-                dest_road=destinationData[1],
-                dest_x=destinationData[2],
-                length=4.5,
-                rng= random.Random()
-                )
-
+        spawner(router, ActiveRoadsList, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
     accumulator += min(frame_time, 0.25) * SIM_SPEED
@@ -207,11 +169,6 @@ while running:
 
             PolygonCords = [tuple(Corner1), tuple(Corner2), tuple(Corner3), tuple(Corner4)]
 
-            # if roadData.oneway:
-            #     pygame.draw.polygon(surface=screen, color=(0, 0, 255), points=PolygonCords)
-            # else:
-            #     pygame.draw.polygon(surface=screen, color=(255, 0, 0), points=PolygonCords)
-            # pygame.draw.polygon(surface=screen, color=colouring[roadData.osmid], points=PolygonCords)
             pygame.draw.polygon(surface=screen, color=(25,25,25), points=PolygonCords)
 
             if not roadData.oneway:
