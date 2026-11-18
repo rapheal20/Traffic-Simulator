@@ -1,11 +1,7 @@
 import pygame
 import numpy as np
-import uuid
-import sys
-import random
 
 
-# from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 from Simulation_Helpers import *
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
 from Object_Classes.Router import Router
@@ -98,7 +94,7 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 100:
+    while len(ActiveCarsNow) != 1:
         spawner(router, ActiveRoadsList, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
