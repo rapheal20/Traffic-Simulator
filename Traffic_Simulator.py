@@ -8,9 +8,9 @@ import random
 # from RealMapsLoader import screen_nodes, projectedGraph, scale, FinalLaneCounts
 from Simulation_Helpers import *
 from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
-from Object_Classes.IDM_Car import Car
 from Object_Classes.Router import Router
 from Object_Classes.TrafficLights import ActiveSignals, build_signals
+from Object_Classes.turn import build_turn_table, TURN_TABLE
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -40,6 +40,8 @@ mapSaved = False
 coordinates, radius = (40.7580, -73.9855), 400
 scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
 router = Router(ActiveRoadsList)
+build_turn_table(ActiveRoadsList)
+print(len(TURN_TABLE))
 
 # sys.exit()
 sim_time = 0.0
@@ -283,10 +285,13 @@ while running:
             tuple((c3_world * scale) + cameraOffset),
             tuple((c4_world * scale) + cameraOffset)
         ]
-        
-        
 
-        pygame.draw.polygon(surface=screen, color=(255,0,0), points=screenCorners)
+
+        TURN_COL = {'left': (255, 150, 0), 'right': (170, 60, 200),
+            'straight': (40, 120, 220), None: (130, 130, 130)}
+        colour = TURN_COL[carObj.next_turn]
+        # (255,0,0)
+        pygame.draw.polygon(surface=screen, color=colour, points=screenCorners)
 
     #updates the display
     pygame.display.flip()

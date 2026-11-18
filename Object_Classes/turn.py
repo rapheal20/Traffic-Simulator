@@ -53,7 +53,7 @@ def build_turn_table(roads):
 
 
 def turn_kind(current_road, next_road):
-    key = (current_road.road_id, next_road.road.id)
+    key = (current_road.road_id, next_road.road_id)
 
     kind =  TURN_TABLE.get(key)
 
