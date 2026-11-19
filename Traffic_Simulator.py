@@ -7,6 +7,7 @@ from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsLi
 from Object_Classes.Router import Router
 from Object_Classes.TrafficLights import ActiveSignals, build_signals
 from Object_Classes.turn import build_turn_table, TURN_TABLE
+from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ring_points, ARCS
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -35,6 +36,7 @@ mapSaved = False
 
 coordinates, radius = (40.7580, -73.9855), 400
 scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
+print("roundabouts found:", len({id(a.center) for a in ARCS.values()}))
 router = Router(ActiveRoadsList)
 build_turn_table(ActiveRoadsList)
 print(len(TURN_TABLE))
@@ -44,6 +46,51 @@ sim_time = 0.0
 accumulator = 0.0
 SIM_SPEED = 5.0
 
+def draw_ring_roads():
+    dash_w = max(1, int(DASHES_WIDTH * scale))
+    for roadID, arc in ARCS.items():
+        road = ActiveRoadsList[roadID]
+        half = carriageway_width_m(road.lanes) / 2
+        x = np.linspace(0.0, arc.length, max(3, int(arc.length / arc.radius / 0.12) + 2))
+        # arc.length / arc.radius gies the sweep angle in rad, divide it by 0.12, so point at every 7 deg
+        # minmum 3 samplep points along the arc.length
+        # np.linspace generate an array of evenly spaced numbers over a intevral
+
+        band = np.vstack((ring_points(arc, x, -half), ring_points(arc, x, half)[::-1]))
+        # ring_points(arc, x, -half) => computes innter left egdes
+        # ring_points(arc, x, half)[::-1] => computes outer right edges in reserse
+        # they are ordered so vertices trace a closed perimeter with out self intersection
+        # np.vstack stacks both edges in a single polygon array
+
+        pygame.draw.polygon(screen, (25,25,25), (band * scale + cameraOffset).tolist())
+        # makes a python list with points 
+
+        starts = np.arange(0.0, arc.length - DASH_length, DASH_length + GAP_length)
+        # generates array of starting ditance for each dash
+
+        for i in range(1, road.lanes):
+            d = i * LANE_WIDTH + (i -1) * DASHES_WIDTH - half
+            #sideway offset 'd' for lane divider
+
+            P = ring_points(arc, starts, d) * scale + cameraOffset
+            Q = ring_points(arc, starts + DASH_length, d) * scale + cameraOffset
+            # finds starts point P and end point Q for every dash segment
+
+            for p,q in zip(P, Q):
+                pygame.draw.line(screen, (255,255,255), tuple(p), tuple(q), dash_w)
+       
+        # deduplicates objects by their center array
+        #round about only gets 1 central grass island
+        for arc in {id(a.c): a for a in ARCS.values()}.values():
+            w = max(
+            carriageway_width_m(ActiveRoadsList[roadID].lanes) / 2
+            for r_ID, a in ARCS.items()
+            if a.c is arc.c
+            )
+
+            if arc.r > w:
+                pygame.draw.circle(screen, (120,170,110), tuple(arc.center * scale + cameraOffset),
+                                   int((arc.radius - w) * scale))
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -94,7 +141,7 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 1:
+    while len(ActiveCarsNow) != 100:
         spawner(router, ActiveRoadsList, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
@@ -123,6 +170,9 @@ while running:
     drawGrid()
 
     for roadID, roadData in ActiveRoadsList.items():
+        if roadID in ARCS:
+            continue
+
         LaneNo = roadData.lanes
         vector1 = roadData.coordinates[0]
         vector2 = roadData.coordinates[1]
@@ -202,6 +252,8 @@ while running:
                     pygame.draw.line(screen,(255,255,255), tuple(current_pos), tuple(dashEnd), width=dashPixelWidth)
                     current_pos += Unit_Dir * cycleLen
 
+    draw_ring_roads()
+
     for nodeID, nodeData in ActiveNodesDict.items():
         nodeType = nodeData.Type
         if nodeType == 'traffic_signals':         
@@ -264,6 +316,8 @@ while running:
         # LaneOffset = (carObj.lane - (LaneNo - 1)/2.0) * LANE_WIDTH
         LaneOffset = lane_center_offset_m(roadData, carObj.lane)
         CarCenterWorld = carWorldPos + (normal * LaneOffset)
+        if carRoad in ARCS:
+            CarCenterWorld, unitVector, normal = ring_pose(ARCS[carRoad], carObj.x, LaneOffset)
 
 
         CarLen_PX = carObj.length

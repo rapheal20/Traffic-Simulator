@@ -49,6 +49,7 @@ def build_turn_table(roads):
 
         #classify each outgoing road and store it
         for j, f, l in zip(outs, forward, lateral):
+            ring_pair = roads[r_ID].is_ring or roads[ids[j]].is_ring
             TURN_TABLE[(r_ID, ids[j])] = _classify(f,l)
 
 
@@ -62,7 +63,9 @@ def turn_kind(current_road, next_road):
         normal = np.asarray(current_road.NormalVector, dtype=float)
         NEXT_unitVec = np.asarray(next_road.UnitVector, dtype=float)
         kind = TURN_TABLE[key] = _classify(NEXT_unitVec @ unitVec, NEXT_unitVec @ unitVec)
-
+    
+    if current_road.is_ring or next_road.is_ring:
+        return 'straight'
     return kind
 
 def allowed_lanes(n, kind):

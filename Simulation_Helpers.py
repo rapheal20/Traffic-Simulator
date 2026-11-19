@@ -11,15 +11,16 @@ import os
 import sys
 import random
 import uuid
+import math
 from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
 from Object_Classes.TrafficLights import ActiveSignals, build_signals
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 from Object_Classes.IDM_Car import Car
 from Object_Classes.turn import lane_is_clear, allowed_lanes, lane_gap, entry_lane
+from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ARCS
 
-
-
+A_LAT = 2.0 #acc drivers accept on a curve
 
 # CONSTANTS
 SCALE_PER_M = 5
@@ -164,6 +165,8 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
     # MAP SAVING
 
     '''ROADS'''
+    RING_ARCS, _ = build_ring_arcs(projectedGraph, screen_nodes)
+
     for u, v, data in projectedGraph.edges(data=True):
         # Make sure both ends of the road exist in our screen dictionary
         if u in screen_nodes and v in screen_nodes:
@@ -185,7 +188,14 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
             rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
             normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
 
+            arc = RING_ARCS.get((u, v))
+            if arc is not None:
+                length = round(arc.length)
+                _, UnitVector, normal = ring_pose(arc, 0.0, 0.0)
+
             Speed_Limit_KMH = findSpeedLimit(data)
+            if arc is not None:
+                Speed_Limit_KMH = min(Speed_Limit_KMH, max(15, round(3.6 * math.sqrt(A_LAT * arc.radius))))
 
             oneway = data.get('oneway', True)
 
@@ -200,7 +210,7 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
             try:
                 total = int(raw)
             except:
-                total = LaneNo or 1
+                total = 1
             LaneNo = max(1, total) if oneway else max(1, (total + 1)//2)
 
             uniqueID = str(uuid.uuid4())
@@ -215,10 +225,10 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
 
             #if the road has a single lane it is considered minor and will be used for spawing cars
             if LaneNo < 2 or data.get('highway') != "motorway":
-                if length >= 20:
+                if length >= 20 and arc is None:
                     AvailableLocations.append(uniqueID)
                 
-            roads(
+            newRoad = roads(
                 roadID= uniqueID,
                 coordinates= [vector1,vector2],
                 roadLength= length,
@@ -230,6 +240,10 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
                 startNode=u,
                 endNode=v
             )
+
+            newRoad.is_ring = arc is not None
+            if arc is not None:
+                ARCS[uniqueID] = arc
 
     '''NODES'''        
 
@@ -259,11 +273,16 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
                 mainRoad= mainRoad
             )
 
+    for rID in ARCS:
+        road = ActiveRoadsList[rID]
+        for n in (road.StartNode, road.EndNode):
+            ActiveNodesDict[n].MaxLanes = road.lanes
+
 
     '''SIGNAL'''
     for road in ActiveRoadsList.values():
         buf = ActiveNodesDict[road.EndNode].MaxLanes * LANE_WIDTH/2 #same as trim, used to stop car before
-        road.stop_x = max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
+        road.stop_x = road.lenght if road.is_ring else max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
 
     build_signals(ActiveRoadsList, ActiveNodesDict, random.Random(1))
 

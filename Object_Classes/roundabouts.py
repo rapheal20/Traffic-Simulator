@@ -65,21 +65,50 @@ def build_ring_arcs(graph, screen_nodes, tol=0.15):
             if u in screen_nodes and v in screen_nodes:
                 edges.append((u,v))
 
-    parent = {}
-
-    def find(a):
-        parent.setdefault(a, a)
-        while parent[a] != a:
-            parent[a] = parent[parent[a]]
-            a = parent[a]
-        return a
-
-    for u, v in edges:
-        parent[find(u)] = find(v)
-    groups = {}
-    for u, v in edges:
-        groups.setdefault(find(u), []).append((u,v))
-
     arcs, rings = {}, []
-    for es in groups.values():
-        nodes = sorted({n for e in es for n in e})
+
+    #nx.graph makes an undirected graph from roundabout edges
+    #nx.connected_component groups connected nodes onto seperate sets
+    for comp in nx.connected_components(nx.Graph(edges)):
+        #circle needs atleast 3 points
+        if len(comp) < 3:
+            continue
+
+        nodes = sorted(comp) #sorts the node IDs for consistent order
+        P = np.array([screen_nodes[n][0] for n in nodes], dtype=float)
+
+        # np.column_stack makes a matrix of [2*x, 2*y,1]
+        # np.ones makes a array a 1
+        (cx, cy, k) , *_ = np.linalg.lstsq(np.column_stack((2 * P, np.ones(len(P)))), (P ** 2).sum(1), rcond=None)
+
+        center = np.array([cx, cy])
+        radius = math.sqrt(k + center @ center)
+        #center @ center finds the dot product. so sum of their squares
+
+        # skips the group is error more then 15% of radius
+        # np.abs(np.linalg.norm(P - center, axis=1) - radius) => finds th eradius and finds th emax error
+        if np.abs(np.linalg.norm(P - center, axis=1) - radius).max() > tol * radius:
+            continue
+
+        phi = {n: math.atan2(p[1] - cy, p[0] - cx) for n, p in zip(nodes, P)}
+        #finds each nodes angle in rad relative to circles center
+
+        es = [(u, v) for u, v in edges if u in comp]
+        #filters edges to keep only those conected to this roundabout
+
+        step = np.array([(phi[v] - phi[u] + math.pi) % (2 * math.pi) - math.pi for u, v in es])
+        # computes the angle change for each edge btw +pi and -pi
+
+        sigma = 1.0 if step.sum() >= 0 else -1.0
+        #sums the signed steps, +ve counter, -ve clockwise
+
+        sweep = (sigma * np.array([phi[v] - phi[u] for u, v in es])) % (2 * math.pi)
+        #find the positive angle btw 0 to 2pi for each segment in the correct direction
+
+        if abs(sweep.sum() - 2 * math.pi) > 0.3:
+            continue
+
+        for (u, v), s in zip(es, sweep):
+            arcs[(u,v)] = Arc(center, radius, phi[u], sigma, radius * s) #creates an arc namestuple
+        rings.append((center, radius, comp)) #stores the ring
+    return arcs, rings
