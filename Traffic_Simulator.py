@@ -34,7 +34,9 @@ MAX_ZOOM = 5.0
 running = True
 mapSaved = False
 
-coordinates, radius = (40.7580, -73.9855), 400
+# coordinates, radius = (40.7580, -73.9855), 400
+coordinates, radius = (52,-0.7), 400
+
 scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
 print("roundabouts found:", len({id(a.center) for a in ARCS.values()}))
 router = Router(ActiveRoadsList)
@@ -141,7 +143,7 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 100:
+    while len(ActiveCarsNow) != 500:
         spawner(router, ActiveRoadsList, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
@@ -256,26 +258,26 @@ while running:
 
     for nodeID, nodeData in ActiveNodesDict.items():
         nodeType = nodeData.Type
-        if nodeType == 'traffic_signals':         
-            nodePos = np.array(nodeData.Coordinates, dtype=float)
-            screenPos = (nodePos * scale) + cameraOffset
-            halfnodeDim_M = (nodeData.MaxLanes * LANE_WIDTH + (nodeData.MaxLanes-1) * DASHES_WIDTH)/2
-            halfnodeDim_PX = halfnodeDim_M * scale
+        # if nodeType == 'traffic_signals':         
+        nodePos = np.array(nodeData.Coordinates, dtype=float)
+        screenPos = (nodePos * scale) + cameraOffset
+        halfnodeDim_M = (nodeData.MaxLanes * LANE_WIDTH + (nodeData.MaxLanes-1) * DASHES_WIDTH)/2
+        halfnodeDim_PX = halfnodeDim_M * scale
 
-            normal = ActiveRoadsList[nodeData.MainRoad].NormalVector
-            tangent = ActiveRoadsList[nodeData.MainRoad].UnitVector
+        normal = ActiveRoadsList[nodeData.MainRoad].NormalVector
+        tangent = ActiveRoadsList[nodeData.MainRoad].UnitVector
 
-            NCorner1 = screenPos + (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
-            NCorner2 = screenPos + (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
-            NCorner3 = screenPos - (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
-            NCorner4 = screenPos - (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
+        NCorner1 = screenPos + (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
+        NCorner2 = screenPos + (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
+        NCorner3 = screenPos - (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
+        NCorner4 = screenPos - (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
 
-            NodeCoordinates = (NCorner1, NCorner2, NCorner3, NCorner4)
+        NodeCoordinates = (NCorner1, NCorner2, NCorner3, NCorner4)
 
-            pygame.draw.polygon(screen, (25,25,25), points=NodeCoordinates)
+        pygame.draw.polygon(screen, (25,25,25), points=NodeCoordinates)
 
-    #     elif nodeType == 'roundabout':
-
+        # elif nodeType == 'roundabout':
+            # print("roundabout")
     #     else:
 
     # print(ActiveCarsNow)

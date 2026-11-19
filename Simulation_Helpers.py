@@ -1,7 +1,7 @@
 import osmnx as ox
 
-ox.settings.use_cache = False
-ox.settings.log_console = False
+# ox.settings.use_cache = False
+# ox.settings.log_console = False
 #to stop it from writing cache into restructed dir(for executable)
 
 import statistics as st
