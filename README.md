@@ -110,4 +110,4 @@ As of right now only phase 1 is complete with little progress done on the other 
 
 I am shipping this project for now but will continue to work on it. Overall the development process was a great experience desipte it getting complicated at time due to the nature of it but definately enjoyed it
 
-This Project is made as part of Phantom even in Hack Club.
+This Project is made as part of a event in Hack Club.
