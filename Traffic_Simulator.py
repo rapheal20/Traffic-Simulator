@@ -149,6 +149,7 @@ while running:
     frame_time = clock.tick(60) / 1000.0
     accumulator += min(frame_time, 0.25) * SIM_SPEED
     while accumulator >= DT:
+        
         simulation_step(ActiveCarsNow, DT, sim_time)
         sim_time += DT
         accumulator -= DT

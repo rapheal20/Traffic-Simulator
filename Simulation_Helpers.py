@@ -50,6 +50,11 @@ T_CRIT = 3.5
 T_FOLLOW = 1.5
 V_MIN = 1.0
 
+#Box Blocking Const.
+BOX_LOOK = 60.0 #from how far is the exit space checked
+BOX_MARGIN = 2.0    #extra space beyond the cars own lengh
+BOX_PATIENCE = 12.0     #seconds a car waits before entering anyway
+
 
 DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
     'motorway': 100, 'trunk': 80, 'primary': 60,
@@ -434,7 +439,7 @@ def simulation_step(cars, dt, t):
                 per_gap, per_leader_v = carOBJ.perceived()
                 if gap is not None and gap < carOBJ.profile.s0:
                     per_gap, per_leader_v = gap, leader_v
-                for obs in (signal_leader(carOBJ, road, t), yield_leader(carOBJ, road, t)): 
+                for obs in (signal_leader(carOBJ, road, t), yield_leader(carOBJ, road, t), box_leader(carOBJ, road, t)): 
                     if obs is not None and (per_gap is None or obs[0] < per_gap):
                         per_gap, per_leader_v = obs
 
@@ -512,7 +517,39 @@ def approach_limit(car, road):
     d = max(0.0, road.stop_x - car.x)
     return min(limit, 3.6 * math.sqrt((nxt / 3.6) ** 2 + 2 * car.profile.b * d))
 
+def box_leader(car, road, t):
+    #stop at the stop line if there is o room the next road
+    if road.is_ring:
+        return None
+    NextID = car.next_road_id
+    if NextID is None:
+        return None
+    distance = road.stop_x - car.x
+    if distance < 0.5 or distance > BOX_LOOK:   #already past or still far
+        return None
 
+    nextRoad = ActiveRoadsList[NextID]
+    queue = nextRoad.cars_data[entry_lane(car.next_turn, car.lane, int(nextRoad.lanes))]
+    free = (queue[-1].x - queue[-1].length) if queue else float('inf')
+    if free >= car.length + BOX_MARGIN:
+        car.box_wait = 0.0
+        return None
+    if car.v < 0.5:
+        car.box_wait += DT
+        if car.box_wait > BOX_PATIENCE:
+            return None
+    return distance, 0.0
+
+def cars_stuck_in_junction():
+    # cars stopped btw stopline and end of road, use the box blocking
+    n = 0
+    for car in ActiveCarsNow:
+        road = ActiveRoadsList[car.road_id]
+        if car.v < 0.5 and road.stop_x < car.x < road.lenght:
+            n += 1
+    return n
+
+    
 def carriageway_width_m(lanes):
     return lanes * LANE_WIDTH + (lanes - 1) * DASHES_WIDTH
 

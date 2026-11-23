@@ -68,6 +68,7 @@ class Car:
         self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
 
         self.yield_wait = 0.0   #seconds spent stopped at a giveway line
+        self.box_wait = 0.0     #time spent waiting because the next road is stopped
 
     # -------------- HELPERS --------------
     @property #this allows us to make get the value without using a varibale
