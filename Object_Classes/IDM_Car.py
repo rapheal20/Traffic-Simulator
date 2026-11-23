@@ -11,13 +11,55 @@ class DriverProfile:
     T: float    #desired time headway
     s0: float   #minimum bumper gap
     speed_factor: float     #multiper on speed limit
+    reaction: float
+    #========LANE CHANGING
+    politeness: float
+    lane_gain: float
+    lane_cooldown: float
+    safe_brake: float
+    turn_zone: float
+    turn_weight: float
+    #=========JUNCTIONS
+    t_crit: float
+    t_follow: float
+    yield_patience: float
+    box_margin: float
+    box_patience: float
+    yellow_decel: float
+    a_lat: float
 
 PROFILES = {
-    0: DriverProfile(a=3.0, b=3.0, T=1.0, s0=1.5, speed_factor=1.10),    #aggressive
-    1: DriverProfile(a=2.0, b=2.0, T=1.5, s0=2.0, speed_factor=1.00),    #calm
-    2: DriverProfile(a=1.8, b=2.5, T=2.0, s0=3.0, speed_factor=0.92)    #nervous
+     #aggressive
+    0: dict(a=3.0, b=3.0, T=1.0, s0=1.5, speed_factor=1.10, reaction=0.45,
+                     #LANE CHANGE
+                     politeness=0.1, lane_gain=0.15, lane_cooldown=3.0, safe_brake=5.0, turn_zone=100.0, turn_weight=2.0,
+                     #JUNCTIONS
+                     t_crit=2.5, t_follow=0.8, yield_patience=8.0, box_margin=0.5, box_patience=6.0, yellow_decel=2.0, a_lat=3.0), 
+    #calm
+    1: dict(a=2.0, b=2.0, T=1.5, s0=2.0, speed_factor=1.00, reaction=0.72,
+                     #LANE CHANGE
+                     politeness=0.3, lane_gain=0.30, lane_cooldown=5.0, safe_brake=4.0, turn_zone=150.0, turn_weight=3.0,
+                     #JUNCTIONS
+                     t_crit=3.5, t_follow=1.5, yield_patience=15.0, box_margin=2.0, box_patience=12.0, yellow_decel=3.0, a_lat=2.0),    
+    #nervous
+    2: dict(a=1.8, b=2.5, T=2.0, s0=3.0, speed_factor=0.92,  reaction=0.99,
+                     #LANE CHANGE
+                     politeness=0.5, lane_gain=0.60, lane_cooldown=8.0, safe_brake=3.0, turn_zone=220.0, turn_weight=4.0,
+                     #JUNCTIONS
+                     t_crit=4.5, t_follow=2.2, yield_patience=25.0, box_margin=3.5, box_patience=20.0, yellow_decel=3.5, a_lat=1.5)   
 }
 
+SPREAD ={'speed_factor':0.05, 'reaction':0.30, 'politeness':0.50, 'lane_gain':0.30, 'turn_zone':0.25}
+DEFAULT_SPREAD = 0.15
+
+def make_profiles(style, rng):
+    base_stats = PROFILES[style]
+    driver_stats = {}
+    for stat_name, base_value in base_stats.items():
+        spread = SPREAD.get(stat_name, DEFAULT_SPREAD)
+        random_multiplier = rng.uniform(1.0 - spread, 1.0 + spread)
+        driver_stats[stat_name] = base_value * random_multiplier
+    return DriverProfile(**driver_stats)
 
 class Car:
     def __init__(self, car_id, length, route, max_brake=8.0, rng=None,
@@ -30,17 +72,6 @@ class Car:
 
         #fixed properties
         self.style = self.rng.randint(0, 2)
-        base = PROFILES[self.style]
-        self.profile = DriverProfile(
-            a= base.a * self.rng.uniform(0.95, 1.05),
-            b= base.b * self.rng.uniform(0.95, 1.05),
-            T= base.T * self.rng.uniform(0.95, 1.05),
-            s0= base.s0 * self.rng.uniform(0.95, 1.05),
-            speed_factor= base.speed_factor * self.rng.uniform(0.85, 1.15),
-        ) #adds a randomness in the preset values
-
-        
-
         self.max_speed = (self.rng.choice([120, 130, 140, 150, 160, 170, 180])) / 3.6 #m/s
         self.max_brake = max_brake 
 
@@ -59,13 +90,14 @@ class Car:
 
         self.finished = False
 
-        #reaction time with style
-        self.reaction_time = self.rng.uniform(0.3, 0.6) * (1 * self.style * 0.6) #range from 0.3 to 1.3ss
+        self.profile = make_profiles(self.style, self.rng)
+        self.reaction_time = self.profile.reaction
+
         self.history = deque()
         #self.history appends the current observation, the head is the newest observation that is atleast reaction_time old
         #Lane Changing
         self.lane_cooldown = 0.0
-        self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
+        self.politeness = self.profile.politeness
 
         self.yield_wait = 0.0   #seconds spent stopped at a giveway line
         self.box_wait = 0.0     #time spent waiting because the next road is stopped

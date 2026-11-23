@@ -369,8 +369,9 @@ def try_lane_change(car, road):
     best_target = None
     best_progress = 0
 
-    best_score = LANE_GAIN if (need_now == 0 or urg == 0.0) else 0.0
-    safe_brake = LANE_SAFE_BRAKE + 2.0 * urg    #accept rougher brake when time is short
+    profile = car.profile
+    best_score = profile.lane_gain if (need_now == 0 or urg == 0.0) else 0.0
+    safe_brake = profile.safe_brake + 2.0 * urg    #accept rougher brake when time is short
 
 
     for target in (car.lane-1, car.lane+1): #iterates through the neighbouring lanes
@@ -402,7 +403,7 @@ def try_lane_change(car, road):
             loss = max(0.0, a_follower_before - a_follower_after)
 
         progress = need_now - lane_gap(target, allowed) 
-        score = (a_new - a_now) - car.politeness * loss + TURN_WEIGHT * urg * progress
+        score = (a_new - a_now) - car.politeness * loss + profile.turn_weight * urg * progress
         if score > best_score:
             best_target, best_score, best_progress = target, score, progress
 
@@ -412,7 +413,7 @@ def try_lane_change(car, road):
         index = sum(1 for o in target_lane if o.x > car.x)
         target_lane.insert(index, car)
         car.lane = best_target
-        car.lane_cooldown = LANE_COOLDOWN_TURN if (best_progress > 0 and urg > 0) else LANE_COOLDOWN
+        car.lane_cooldown = 0.3 * profile.lane_cooldown if (best_progress > 0 and urg > 0) else profile.lane_cooldown
         car.history.clear()
 
 def simulation_step(cars, dt, t):
@@ -497,8 +498,9 @@ def yield_leader(car, road, t):
 
     if to_junction:
         gap_t = np.array(to_junction) / np.maximum(speeds, V_MIN) - dist / max(car.v, V_MIN)
-        patience = max(0.3, 1.0 - car.yield_wait / 20.0)
-        if ((gap_t > -T_FOLLOW) & (gap_t < T_CRIT * patience)).any():
+        profile = car.profile
+        patience = max(0.3, 1.0 - car.yield_wait / profile.yield_patience)
+        if ((gap_t > -profile.t_follow) & (gap_t < profile.t_crit * patience)).any():
             if car.v < 0.5:
                 car.yield_wait += DT
             return dist, 0.0
