@@ -35,7 +35,7 @@ running = True
 mapSaved = False
 
 # coordinates, radius = (40.7580, -73.9855), 400
-coordinates, radius = (52,-0.7), 400
+coordinates, radius = (52,-0.7), 800
 
 scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
 print("roundabouts found:", len({id(a.center) for a in ARCS.values()}))
@@ -83,14 +83,14 @@ def draw_ring_roads():
        
         # deduplicates objects by their center array
         #round about only gets 1 central grass island
-        for arc in {id(a.c): a for a in ARCS.values()}.values():
+        for arc in {id(a.center): a for a in ARCS.values()}.values():
             w = max(
             carriageway_width_m(ActiveRoadsList[roadID].lanes) / 2
             for r_ID, a in ARCS.items()
-            if a.c is arc.c
+            if a.center is arc.center
             )
 
-            if arc.r > w:
+            if arc.radius > w:
                 pygame.draw.circle(screen, (120,170,110), tuple(arc.center * scale + cameraOffset),
                                    int((arc.radius - w) * scale))
 while running:
@@ -143,7 +143,7 @@ while running:
             #the subtraction is for the pan and then division factors in the zoom
 
     #Initializing cars
-    while len(ActiveCarsNow) != 500:
+    while len(ActiveCarsNow) != 100:
         spawner(router, ActiveRoadsList, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
@@ -342,6 +342,8 @@ while running:
         TURN_COL = {'left': (255, 150, 0), 'right': (170, 60, 200),
             'straight': (40, 120, 220), None: (130, 130, 130)}
         colour = TURN_COL[carObj.next_turn]
+        if carObj.yield_wait > 0:
+            colour = (240, 190,0)
         # (255,0,0)
         pygame.draw.polygon(surface=screen, color=colour, points=screenCorners)
 

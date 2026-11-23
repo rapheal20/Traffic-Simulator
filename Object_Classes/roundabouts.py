@@ -112,3 +112,48 @@ def build_ring_arcs(graph, screen_nodes, tol=0.15):
             arcs[(u,v)] = Arc(center, radius, phi[u], sigma, radius * s) #creates an arc namestuple
         rings.append((center, radius, comp)) #stores the ring
     return arcs, rings
+
+
+
+YIELD_MAP = {}  #ring roadID => m from its end to the junction
+
+def build_yield_map(roads, look=60.0):
+    #cars with junction withn the look have right of way
+
+    ring_in = {}
+    for roadID, roadData in roads.items():
+        if roadData.is_ring:
+            ring_in.setdefault(roadData.EndNode, []).append(roadID)
+
+    YIELD_MAP.clear()
+
+    for roadID, roadData in roads.items():
+        if roadData.is_ring or roadData.EndNode not in ring_in:
+            continue
+        #skips if this road is already a part of the roundabout ring
+
+        found, seen = [], set()
+        #found holds the ring road pair and distance
+        #seen tracks visited ids so no infinite looping
+
+        frontier = [(f, 0.0) for f in ring_in[roadData.EndNode]]
+        #doing a reverse search, begining at roads ending at roundabout
+        #setting default to 0.0 meters away from the junction
+
+        while frontier:
+            #check to check
+            fID, off = frontier.pop()
+
+            if fID in seen:
+                continue
+            seen.add(fID)
+
+            found.append((fID, off))
+
+            off2 = off + roads[fID].lenght
+
+            if off2 < look:
+                frontier += [(g, off2) for g in ring_in.get(roads[fID].StartNode, [])]
+                # look is the visibiltiy limit
+
+        YIELD_MAP[roadID] = found

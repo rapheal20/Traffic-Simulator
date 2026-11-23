@@ -67,6 +67,8 @@ class Car:
         self.lane_cooldown = 0.0
         self.politeness = {0 : 0.1, 1: 0.3, 2:0.5}[self.style]
 
+        self.yield_wait = 0.0   #seconds spent stopped at a giveway line
+
     # -------------- HELPERS --------------
     @property #this allows us to make get the value without using a varibale
     def speed_kmh(self):

@@ -18,7 +18,7 @@ from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
 from Object_Classes.IDM_Car import Car
 from Object_Classes.turn import lane_is_clear, allowed_lanes, lane_gap, entry_lane
-from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ARCS
+from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ARCS, YIELD_MAP, build_yield_map
 
 A_LAT = 2.0 #acc drivers accept on a curve
 
@@ -44,6 +44,11 @@ carWidth = 2
 carlength = 4.5
 DRIVE_SIDE = +1 #left hand traffic
 
+#Roundabout Giveway const.
+YIELD_LOOK = 80
+T_CRIT = 3.5
+T_FOLLOW = 1.5
+V_MIN = 1.0
 
 
 DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
@@ -56,9 +61,9 @@ def resource_path(relative_path):
   return os.path.join(base_path, relative_path)
 
 def Make_Map(coordinates, radius):
-    # graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
+    graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
     
-    graph = ox.load_graphml(resource_path('nyc_map.graphml')) #do avoid a crash in exe
+    # graph = ox.load_graphml(resource_path('nyc_map.graphml')) #do avoid a crash in exe
     projectedGraph = ox.project_graph(graph) #converts the graph form latitide and longitude to XY coordiantes(needed for pygames)
     
     
@@ -285,6 +290,7 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
         road.stop_x = road.lenght if road.is_ring else max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
 
     build_signals(ActiveRoadsList, ActiveNodesDict, random.Random(1))
+    build_yield_map(ActiveRoadsList)
 
     return scale, AvailableLocations
 
@@ -428,12 +434,15 @@ def simulation_step(cars, dt, t):
                 per_gap, per_leader_v = carOBJ.perceived()
                 if gap is not None and gap < carOBJ.profile.s0:
                     per_gap, per_leader_v = gap, leader_v
+                for obs in (signal_leader(carOBJ, road, t), yield_leader(carOBJ, road, t)): 
+                    if obs is not None and (per_gap is None or obs[0] < per_gap):
+                        per_gap, per_leader_v = obs
 
                 sig = signal_leader(carOBJ, road, t)
                 if sig is not None and (per_gap is None or sig[0] < per_gap):
                     per_gap, per_leader_v = sig
 
-                decisions.append((carOBJ, carOBJ.compute_acceleration(road.speed_limit, per_gap, per_leader_v)))
+                decisions.append((carOBJ, carOBJ.compute_acceleration(approach_limit(carOBJ, road), per_gap, per_leader_v)))
 
     for car, a in decisions:
         prev_x = car.x
@@ -461,6 +470,48 @@ def signal_leader(car, road, t):
         # d = (v^2 / 2b)    uses kinematics formual to find the decelration needed
         return None
     return dist, 0.0
+
+def yield_leader(car, road, t):
+    #this is for the giveway line at roundabout entry, acts like a red light if roundabout is busy
+    feeders = YIELD_MAP.get(road.road_id)
+    if not feeders:
+        return None
+    dist = road.stop_x - car.x
+    if dist < 0.5 or dist > YIELD_LOOK:
+        return None
+
+    to_junction, speeds = [], []
+    for feedID, off in feeders:
+        up = ActiveRoadsList[feedID]
+        for lane in up.cars_data:
+            for carOB in lane:
+                nextID = carOB.next_road_id
+                if nextID is not None and ActiveRoadsList[nextID].is_ring:
+                    to_junction.append(up.lenght - carOB.x + off)
+                    speeds.append(carOB.v)
+
+    if to_junction:
+        gap_t = np.array(to_junction) / np.maximum(speeds, V_MIN) - dist / max(car.v, V_MIN)
+        patience = max(0.3, 1.0 - car.yield_wait / 20.0)
+        if ((gap_t > -T_FOLLOW) & (gap_t < T_CRIT * patience)).any():
+            if car.v < 0.5:
+                car.yield_wait += DT
+            return dist, 0.0
+    car.yield_wait = 0.0
+    return None
+
+def approach_limit(car, road):
+    #speed form which car can still slow down comfortably
+    limit = road.speed_limit
+    nextID = car.next_road_id
+    if nextID is None:
+        return limit
+    nxt = ActiveRoadsList[nextID].speed_limit
+    if nxt >= limit:
+        return limit
+    d = max(0.0, road.stop_x - car.x)
+    return min(limit, 3.6 * math.sqrt((nxt / 3.6) ** 2 + 2 * car.profile.b * d))
+
 
 def carriageway_width_m(lanes):
     return lanes * LANE_WIDTH + (lanes - 1) * DASHES_WIDTH
