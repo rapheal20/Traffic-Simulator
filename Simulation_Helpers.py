@@ -12,11 +12,11 @@ import sys
 import random
 import uuid
 import math
-from Active_Lists.ActiveList import ActiveRoadsList, ActiveCarsNow
+from Active_Lists.ActiveList import ActiveRoads, ActiveCarsNow
 from Object_Classes.TrafficLights import ActiveSignals, build_signals
 from Object_Classes.roads import roads
 from Object_Classes.nodes import nodes
-from Object_Classes.IDM_Car import Car
+from Object_Classes.Car import Car
 from Object_Classes.turn import lane_is_clear, allowed_lanes, lane_gap, entry_lane
 from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ARCS, YIELD_MAP, build_yield_map
 
@@ -39,7 +39,7 @@ V_MIN = 1.0
 #Box Blocking Const.
 BOX_LOOK = 60.0 #from how far is the exit space checked
  
-
+ROTATION_MATRICS = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
 
 DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
     'motorway': 100, 'trunk': 80, 'primary': 60,
@@ -153,7 +153,7 @@ def findSpeedLimit(data):
 
     return speedLimit_KMH
 
-def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
+def Initialize_Map(coordinates, radius, ActiveNodes, NodesforRoad):
     scale, projectedGraph, screen_nodes = Make_Map(coordinates, radius)
     FinalLaneCounts = Final_Lane_Count(projectedGraph, screen_nodes)
     AvailableLocations = []
@@ -180,8 +180,7 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
             length = round(np.linalg.norm(direction),0)
             UnitVector = direction/length
 
-            rotation_Matrix = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
-            normal = rotation_Matrix.dot(UnitVector) #does dot multiplication
+            normal = ROTATION_MATRICS.dot(UnitVector) #does dot multiplication
 
             arc = RING_ARCS.get((u, v))
             if arc is not None:
@@ -252,7 +251,7 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
             maxLanes = 0
             
             for roadID in connectedroads:
-                road = ActiveRoadsList[roadID]
+                road = ActiveRoads[roadID]
                 laneNo = road.lanes if road.oneway else road.lanes * 2
                 if laneNo > maxLanes:
                     maxLanes = laneNo
@@ -268,31 +267,31 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
             )
 
     for rID in ARCS:
-        road = ActiveRoadsList[rID]
+        road = ActiveRoads[rID]
         for n in (road.StartNode, road.EndNode):
-            ActiveNodesDict[n].MaxLanes = road.lanes
+            ActiveNodes[n].MaxLanes = road.lanes
 
 
     '''SIGNAL'''
-    for road in ActiveRoadsList.values():
-        buf = ActiveNodesDict[road.EndNode].MaxLanes * LANE_WIDTH/2 #same as trim, used to stop car before
+    for road in ActiveRoads.values():
+        buf = ActiveNodes[road.EndNode].MaxLanes * LANE_WIDTH/2 #same as trim, used to stop car before
         road.stop_x = road.lenght if road.is_ring else max(road.lenght * 0.5, road.lenght - buf)     #adds new attribute
 
-    build_signals(ActiveRoadsList, ActiveNodesDict, random.Random(1))
-    build_yield_map(ActiveRoadsList)
+    build_signals(ActiveRoads, ActiveNodes, random.Random(1))
+    build_yield_map(ActiveRoads)
 
     return scale, AvailableLocations
 
 def SortInLanes(ActiveCarsNow):
     #clears all the lanes
-    for roadOBJ in ActiveRoadsList.values():
+    for roadOBJ in ActiveRoads.values():
         roadOBJ.cars_data = [[] for _ in range(roadOBJ.lanes)]
 
     #adds all the cars into their own road and lane
     for car in ActiveCarsNow:
-        ActiveRoadsList[car.road_id].cars_data[car.lane].append(car)
+        ActiveRoads[car.road_id].cars_data[car.lane].append(car)
 
-    for road in ActiveRoadsList.values():
+    for road in ActiveRoads.values():
         for lane in road.cars_data:
             lane.sort(key=lambda c: c.x, reverse=True)
             #reverse so that index 0 is the car furthest away
@@ -309,7 +308,7 @@ def FindLeader(car, lane, i, road):
     if next_id is None:
         return None, 0.0
 
-    next_Road = ActiveRoadsList[next_id]
+    next_Road = ActiveRoads[next_id]
     next_Lane = entry_lane(car.next_turn, car.lane, int(next_Road.lanes))
     cars_There = next_Road.cars_data[next_Lane]
     if not cars_There:
@@ -407,7 +406,7 @@ def simulation_step(cars, dt, t):
     for car in cars:
         car.lane_cooldown = max(0.0, car.lane_cooldown - dt)
 
-    for road in ActiveRoadsList.values():
+    for road in ActiveRoads.values():
         if len(road.cars_data) < 2:
             continue
         movers = [c for lane in road.cars_data for c in lane] #makes a list of all the cars
@@ -416,7 +415,7 @@ def simulation_step(cars, dt, t):
                 try_lane_change(c, road)
     #deciding phase
     decisions = []
-    for road in ActiveRoadsList.values():
+    for road in ActiveRoads.values():
         for lane in road.cars_data:
             for i, carOBJ in enumerate(lane):
                 gap , leader_v = FindLeader(carOBJ, lane, i, road)
@@ -437,12 +436,12 @@ def simulation_step(cars, dt, t):
     for car, a in decisions:
         prev_x = car.x
         car.apply(a, dt)
-        road  = ActiveRoadsList[car.road_id]
+        road  = ActiveRoads[car.road_id]
         light = ActiveSignals.get(road.EndNode)
         stop = getattr(road, "stop_x", None)
         if light and stop and prev_x < stop <= car.x and light.state(road.road_id, t) == "red":
             print("RED RUN", car.id, f"{car.v*3.6:.0f} km/h")
-        car.update_route(ActiveRoadsList)
+        car.update_route(ActiveRoads)
 
     cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
 
@@ -472,11 +471,11 @@ def yield_leader(car, road, t):
 
     to_junction, speeds = [], []
     for feedID, off in feeders:
-        up = ActiveRoadsList[feedID]
+        up = ActiveRoads[feedID]
         for lane in up.cars_data:
             for carOB in lane:
                 nextID = carOB.next_road_id
-                if nextID is not None and ActiveRoadsList[nextID].is_ring:
+                if nextID is not None and ActiveRoads[nextID].is_ring:
                     to_junction.append(up.lenght - carOB.x + off)
                     speeds.append(carOB.v)
 
@@ -504,7 +503,7 @@ def approach_limit(car, road):
     nextID = car.next_road_id
     if nextID is None:
         return limit
-    nxt = limit_for(car, ActiveRoadsList[nextID])
+    nxt = limit_for(car, ActiveRoads[nextID])
     if nxt >= limit:
         return limit
     d = max(0.0, road.stop_x - car.x)
@@ -521,7 +520,7 @@ def box_leader(car, road, t):
     if distance < 0.5 or distance > BOX_LOOK:   #already past or still far
         return None
 
-    nextRoad = ActiveRoadsList[NextID]
+    nextRoad = ActiveRoads[NextID]
     queue = nextRoad.cars_data[entry_lane(car.next_turn, car.lane, int(nextRoad.lanes))]
     free = (queue[-1].x - queue[-1].length) if queue else float('inf')
     if free >= car.length + car.profile.box_patience:
@@ -537,7 +536,7 @@ def cars_stuck_in_junction():
     # cars stopped btw stopline and end of road, use the box blocking
     n = 0
     for car in ActiveCarsNow:
-        road = ActiveRoadsList[car.road_id]
+        road = ActiveRoads[car.road_id]
         if car.v < 0.5 and road.stop_x < car.x < road.lenght:
             n += 1
     return n
@@ -555,7 +554,7 @@ def lane_center_offset_m(road, lane):
     width  = carriageway_width_m(road.lanes)
     return (lane * (LANE_WIDTH + DASHES_WIDTH) + LANE_WIDTH/2 - width / 2 + carriageway_shift_m(road))
 
-def spawner(router, ActiveRoadsList, AvailableLocations):
+def spawner(router, ActiveRoads, AvailableLocations):
     NoOfLocations = len(AvailableLocations) - 1
     spawnIndex = random.randint(1,NoOfLocations)
     destinationIndex = random.randint(1,NoOfLocations)
@@ -565,12 +564,12 @@ def spawner(router, ActiveRoadsList, AvailableLocations):
     spawn = AvailableLocations[spawnIndex]
     destination = AvailableLocations[destinationIndex]
 
-    Xpos = random.randint(1,round(ActiveRoadsList[spawn].lenght))
-    lane = random.choice([0 , ActiveRoadsList[spawn].lanes - 1])
+    Xpos = random.randint(1,round(ActiveRoads[spawn].lenght))
+    lane = random.choice([0 , ActiveRoads[spawn].lanes - 1])
     if not lane_is_clear(ActiveCarsNow, spawn, lane, Xpos):
         return
 
-    destinationData = [ActiveRoadsList[destination].EndNode,destination, random.randint(6,round(ActiveRoadsList[destination].lenght))]
+    destinationData = [ActiveRoads[destination].EndNode,destination, random.randint(6,round(ActiveRoads[destination].lenght))]
 
     spawn_car(
             router=router,

@@ -1,7 +1,4 @@
-from Object_Classes.roads import roads
-# from roads import roads
-from Active_Lists.ActiveList import ActiveNodesDict
-import heapq
+from Active_Lists.ActiveList import ActiveNodes
 
 class nodes():
 
@@ -15,20 +12,7 @@ class nodes():
         self.MaxLanes = maxLanes
         self.MainRoad = mainRoad
 
-
-
-
-
-       
-        ActiveNodesDict[self.NodeID] = self
+        ActiveNodes[self.NodeID] = self
 
         
        
-
-
-
-
-
-
-
-        

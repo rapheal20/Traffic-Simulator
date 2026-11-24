@@ -1,316 +1,219 @@
-# Car structure
-# 
-# Car
-# │
-# ├── Physical properties
-# │   ├── max_speed
-# │   ├── max_acceleration
-# │   └── max_braking
-# │
-# ├── Current state
-# │   ├── position
-# │   ├── speed
-# │   ├── acceleration
-# │   └── lane
-# │
-# ├── Driver properties
-# │   ├── driving_style
-# │   ├── reaction_time
-# │   └── safety_margin
-# │
-# ├── Trip information
-# │   ├── destination
-# │   ├── route
-# │   └── routing_preference
-# │
-# └── Methods
-#     ├── observe()
-#     ├── decide()
-#     ├── accelerate()
-#     ├── brake()
-#     ├── move()
-#     └── change_lane()
-
 import random
-from Active_Lists.ActiveList import ActiveCarsNow, ActiveRoadsList, ActiveNodesDict
-from Simulation_Helpers import *
-from heapq import heappush, heapify, heappop
-import heapq
-import sys
+import math
+from collections import deque
+from dataclasses import dataclass  #used to make record datatype
+from Object_Classes.turn import turn_kind, entry_lane
 
+@dataclass(frozen=True) #frozen makes it read only
+class DriverProfile:
+    a: float    #max comfortable acc
+    b: float    #comfortable braking
+    T: float    #desired time headway
+    s0: float   #minimum bumper gap
+    speed_factor: float     #multiper on speed limit
+    reaction: float
+    #========LANE CHANGING
+    politeness: float
+    lane_gain: float        #minimum benefit to change lane
+    lane_cooldown: float
+    safe_brake: float       #max braking to impose on new follower while lane change
+    turn_zone: float
+    turn_weight: float
+    #=========JUNCTIONS
+    t_crit: float
+    t_follow: float
+    yield_patience: float
+    box_margin: float       #extra space beyond the cars own lengh
+    box_patience: float     #seconds a car waits before entering anyway
+    yellow_decel: float
+    a_lat: float        #acc drivers accept on a curve
 
-class car():
-    
-    def __init__(self, graph, carID, roadID, X_pos, laneNO, speed, acc,spawn, destinationList, carLenght):
+PROFILES = {
+     #aggressive
+    0: dict(a=3.0, b=3.0, T=1.0, s0=1.5, speed_factor=1.10, reaction=0.45,
+                     #LANE CHANGE
+                     politeness=0.1, lane_gain=0.15, lane_cooldown=3.0, safe_brake=5.0, turn_zone=100.0, turn_weight=2.0,
+                     #JUNCTIONS
+                     t_crit=2.5, t_follow=0.8, yield_patience=8.0, box_margin=0.5, box_patience=6.0, yellow_decel=2.0, a_lat=3.0), 
+    #calm
+    1: dict(a=2.0, b=2.0, T=1.5, s0=2.0, speed_factor=1.00, reaction=0.72,
+                     #LANE CHANGE
+                     politeness=0.3, lane_gain=0.30, lane_cooldown=5.0, safe_brake=4.0, turn_zone=150.0, turn_weight=3.0,
+                     #JUNCTIONS
+                     t_crit=3.5, t_follow=1.5, yield_patience=15.0, box_margin=2.0, box_patience=12.0, yellow_decel=3.0, a_lat=2.0),    
+    #nervous
+    2: dict(a=1.8, b=2.5, T=2.0, s0=3.0, speed_factor=0.92,  reaction=0.99,
+                     #LANE CHANGE
+                     politeness=0.5, lane_gain=0.60, lane_cooldown=8.0, safe_brake=3.0, turn_zone=220.0, turn_weight=4.0,
+                     #JUNCTIONS
+                     t_crit=4.5, t_follow=2.2, yield_patience=25.0, box_margin=3.5, box_patience=20.0, yellow_decel=3.5, a_lat=1.5)   
+}
 
-        self.car_id = carID
-        self.car_length = carLenght
+SPREAD ={'speed_factor':0.05, 'reaction':0.30, 'politeness':0.50, 'lane_gain':0.30, 'turn_zone':0.25}
+DEFAULT_SPREAD = 0.15
 
-        #Car Physical properties
-        max_speed_list = [120, 130, 140, 150, 160, 170, 180]
-        self.max_speed = max_speed_list[random.randint(0, 6)]
-        self.max_acceleration = round(random.uniform(2.0,4.0), 4)
-        self.max_braking = round(random.uniform(7.0,9.0), 4)
+def make_profiles(style, rng):
+    base_stats = PROFILES[style]
+    driver_stats = {}
+    for stat_name, base_value in base_stats.items():
+        spread = SPREAD.get(stat_name, DEFAULT_SPREAD)
+        random_multiplier = rng.uniform(1.0 - spread, 1.0 + spread)
+        driver_stats[stat_name] = base_value * random_multiplier
+    return DriverProfile(**driver_stats)
 
-        emergencycar = random.randint(1,10)
-        if emergencycar > 2:
-            self.car_priority = 0
-        else:
-            self.car_priority = 1
-        # 0 : Normal Car
-        # 1 : Emergency Vehicle
-        # 80% of the cars are normal
-
-
-        #Spawn Data
-
-        #the xpos is the distance of the car`s front bumper to the start of the road, gap is bumper to bumper
-        self.current_road = roadID
-        self.X_position = X_pos
-        self.lane_No = laneNO
-        self.current_speed = speed
-        self.current_acceleration = acc
-
-        
-        #Driver properties
-
-        # Driving Style:
-        # 0 = Aggressive
-        # 1 = Calm
-        # 2 = Nervous
-        self.driving_style = random.randint(0, 2)
-        self.reaction_time = round(random.uniform(0.2, 2.0), 4)
-        self.safety_margin = self.minGapCalc()
-
-
-        #Routing Properties
-        self.spawn = spawn #AvailableDestinations[spawn_location]
-        self.destinationList = destinationList
-        self.destination = destinationList[0] #AvailableDestinations[destination_location]
-        self.routing_preference = random.randint(0, 1)
-        #0: Less Distance
-        #1: Less time
-        self.route = self.pathFinder(graph, self.spawn, self.destination)
-        
-        #only appends in the list if the spawna and destination are reachable
-        if self.route:
-            print("route found")
-            self.roadRoute = self.roadPath(graph)
-            if self.roadRoute and self.roadRoute[0] == self.current_road:
-                ActiveCarsNow.append(self)
-            else:
-                print("Bad route")
-        else:
-            print("NP")
-
-    def minGapCalc(self):
-        speed = self.current_speed/3.6        
-        return driverConstants[self.driving_style]['BASE_GAP'] + (driverConstants[self.driving_style]['GAP_CONSTANT'] * self.reaction_time)*speed
-        
-    def carAheadDataFind(self):
-        roadData = ActiveRoadsList[self.current_road]
-        roadLimit = ActiveRoadsList[self.current_road].speed_limit
-        laneData = roadData.cars_data[self.lane_No]
-
-        # from that 2d list takes the data for that specific lane
-        numberOfCars = len(laneData)
-        #finds the number of cars on that lane
-
-        currentCarId = None
-        #default None just in case after a turn a car hasnt been added yet
-
-        # iterates through the lane data, and finds the position of the car in that lane
-        for i in range(numberOfCars):
-            if laneData[i].car_id == self.car_id:
-                currentCarId = i
-                break
-
-        # target_turn_distance = self.roadRoute.get(self.current_road, roadData.lenght)
-        target_turn_distance = roadData.lenght
-        
-        if currentCarId is None:
-            gap = target_turn_distance - self.X_position
-            return {'Speed' : roadLimit, 'Gap': gap}
-
-        currentCarXpos = laneData[currentCarId].X_position 
-        if currentCarId != 0:
-            carAheadXpos = laneData[currentCarId-1].X_position 
-            carAheadLen = laneData[currentCarId-1].car_length
+class Car:
+    def __init__(self, car_id, length, route, max_brake=8.0, rng=None,
+                 lane=0, start_x=0.0, start_speed_kmh=0.0,
+                 dest_road=None, dest_x=None):
             
-            gap = (carAheadXpos - carAheadLen) - currentCarXpos
-            carAheadSpeed = laneData[currentCarId-1].current_speed
-        else:
-            gap = target_turn_distance - currentCarXpos
-            carAheadSpeed = roadLimit
+        self.id = car_id
+        self.length = length #m
+        self.rng = rng or random.Random()   #this creates a random seed, generates the randomness
 
-        return {'Speed' : carAheadSpeed, 'Gap': gap}
-        #if there is no car ahead of a car it calculates the gap from the end of the road
+        #fixed properties
+        self.style = self.rng.randint(0, 2)
+        self.max_speed = (self.rng.choice([120, 130, 140, 150, 160, 170, 180])) / 3.6 #m/s
+        self.max_brake = max_brake 
 
-    def carAccelerate(self, timeframe):
-        carAheadData = self.carAheadDataFind()
-        aheadSpeed = carAheadData["Speed"]/3.6 #in m/s
-        gap = carAheadData["Gap"]
-        if  gap < self.safety_margin:
+        #trip
+        self.route = route      #list of all the road ids
+        self.route_index = 0
+        self.dest_road = dest_road      #end road
+        self.dest_x = dest_x        #end road location
 
-            ''' ###### BRAKE ###### '''
+        #current state
+        self.x = start_x    #front bumber distance from start of road
+        self.v = start_speed_kmh / 3.6
+        self.a = 0.0
+        self.lane = lane
+        self.next_turn = None
 
-            # print("braking")
-            if gap <= (0.5 * self.safety_margin):
-                #very small gap so emergency braking (braking threshold = 85 to 90%)
-                targetSpeedMultiplier = round(random.uniform(0.1, 0.25),3)
-            elif gap <= (0.75 * self.safety_margin):
-                #small gap so hard braking (braking threshold = 55 to 75%)
-                targetSpeedMultiplier = round(random.uniform(0.25, 0.45),3)
-            elif gap <= (0.9 * self.safety_margin):
-                #not that small gap so normal braking (braking threshold = 25 to 40%)
-                targetSpeedMultiplier = round(random.uniform(0.6, 0.75),3)
-            else: 
-                #ok gap so norvery little braking (braking threshold = 10 to 20%)
-                targetSpeedMultiplier = round(random.uniform(0.8, 0.9),3)
+        self.finished = False
 
+        self.profile = make_profiles(self.style, self.rng)
+        self.reaction_time = self.profile.reaction
 
-            Updated_Data = self.Acceleration_Working(aheadSpeed,
-                                                    targetSpeedMultiplier,
-                                                    'BRAKING_CONSTANT',
-                                                    timeframe
-                                                    )
-            # print(gap, self.safety_margin)
-            self.current_speed = Updated_Data['Speed']
-            self.current_acceleration = Updated_Data['Acc']
-            self.X_position += Updated_Data['Distance']
+        self.history = deque()
+        #self.history appends the current observation, the head is the newest observation that is atleast reaction_time old
+        #Lane Changing
+        self.lane_cooldown = 0.0
+        self.politeness = self.profile.politeness
 
-        elif gap > self.safety_margin:
+        self.yield_wait = 0.0   #seconds spent stopped at a giveway line
+        self.box_wait = 0.0     #time spent waiting because the next road is stopped
 
-            ''' ###### ACCELERATE ###### '''
+    # -------------- HELPERS --------------
+    @property #this allows us to make get the value without using a varibale
+    def speed_kmh(self):
+        return self.v * 3.6     #for display
 
-            # print("accelerate")
-            if gap >= (1.5 * self.safety_margin):
-                #bigger gap then 150% so greater speed increment 1 to 1.1
-                targetSpeedMultiplier = round(random.uniform(1.0, 1.1),3)
-            elif gap >= (1.1 * self.safety_margin):
-                #bigger gap then 110% so normal speed increment 0.95 to 1.05
-                targetSpeedMultiplier = round(random.uniform(0.95, 1.05),3)
-            else:
-                #smaller gap then 110% so smaller speed increment 0.9 to 1.0
-                targetSpeedMultiplier = round(random.uniform(0.9, 1.0),3)
+    @property
+    def road_id(self):
+        return self.route[self.route_index]
 
-            Updated_Data = self.Acceleration_Working(aheadSpeed,
-                                                        targetSpeedMultiplier,
-                                                        'ACC_CONSTANT',
-                                                        timeframe
-                                                        )
-            # print(gap, self.safety_margin)
-            self.current_speed = Updated_Data['Speed']
-            self.current_acceleration = Updated_Data['Acc']
-            self.X_position += Updated_Data['Distance']
+    def desired_speed(self, limit_Kmh):
+        return min(self.max_speed, limit_Kmh/3.6 * self.profile.speed_factor)
 
-    def Acceleration_Working(self, CarAheadSpeed, SpeedMultiplier, constantStype, timeframe):
-        #this gives the randomized target speed
-        targetSpeed = CarAheadSpeed * SpeedMultiplier
-        roadLimit = ActiveRoadsList[self.current_road].speed_limit
-        limit_SI = min(self.max_speed, roadLimit) / 3.6
-        targetSpeed = min(targetSpeed, limit_SI)
-        
-        #defined in Simulation.py, this is a driver property whch tells how much to accelerate per timeframe
-        acc_contant = driverConstants[self.driving_style][constantStype]
+    @property
+    def next_road_id(self):
+        if self.route_index + 1 < (len(self.route)):
+            return self.route[self.route_index +1]
+        return None
 
-        currentSpeedSI = self.current_speed/3.6 #in m/s
+    # -------------- PHYSICS --------------
+    def IDM_acceleration(self, v0, gap=None, leader_v=0.0):
+        '''
+        v0 = desired speed
+        gap = bumper to bumper distance btw leader, None if no leader
+        leader_v = leader`s speed, ignored when gap is None
+        '''
+        Car_Profile = self.profile
+        free_term = 1 - (self.v / v0) ** 4      
+        """
+        scaling multiplier for the vehicles max acceleration
+        if self.v = 0 then it give 1, so the multiplier is 1 ie 100%
+        if self.v = v0 then it gives 0, so multiplier is 0, and v is maintained
+        if self.v > v0 then it gives a negative value, the vehicle decelearates
+        exponent 4, for a smooth transition
+        """
 
-        #formula for finding the target speed for the current timeframe
-        frameTargetSpeed = currentSpeedSI + acc_contant*(targetSpeed-currentSpeedSI)
+        if gap is None: #open road, sets speed based on desired speed
+            return Car_Profile.a * free_term
 
-        #based on the current frame target speed the acceleration required
-        requiredAcceleration = (frameTargetSpeed - currentSpeedSI)/timeframe
-        requiredAcceleration = max(-self.max_braking, min(self.max_acceleration, requiredAcceleration))
+        dv = self.v - leader_v
+        s_star = (Car_Profile.s0 + self.v * Car_Profile.T + 
+                  (self.v * dv) / (2 * math.sqrt(Car_Profile.a * Car_Profile.b)))
+        '''
+        s_star = desired gap the driver wants to keep
+        s0 = minimum gap to be maintained always
+        self.v * Car_Profile.T = distance covered in T sec, time based buffer
+        self.v * dv = dynamic interaction term
+        if vehicle ahead is slower, dv is +ve so this term increases the desired gap to prepare for braking
+        (self.v * dv) / (2 * math.sqrt(Car_Profile.a * Car_Profile.b)) = calculates the extra space needed if a slower car is being approached 
+        2 * math.sqrt(Car_Profile.a * Car_Profile.b) = scales it for gentle braking and acc
+        '''
+        s_star = max(s_star, Car_Profile.s0)       #to ensure its never less then minimum gap
+        gap = max(gap, 0.1)     #to avoid division by 0, if cars touch   
 
-        newSpeedSI = max(0.0, currentSpeedSI + requiredAcceleration * timeframe)
-        distance_travelled = currentSpeedSI * timeframe + 0.5 * requiredAcceleration * timeframe**2
-        
-        return {'Speed' : round(newSpeedSI * 3.6,3), 
-                'Acc' : round(requiredAcceleration,3),
-                'Distance' : round(distance_travelled,3)}
-    
-    def pathFinder(self, graph, start, destination):
-        try:
-            NodeDist = {}
-            inf = sys.maxsize
-            for node in graph.keys():
-                NodeDist[node] = {"cost" : inf, "pred" : ""}
-        
-            NodeDist[start]['cost'] = 0
-            VisitedNodes = []
-            min_heap = []  
-            heappush(min_heap, (0, start))
-            while min_heap:
-                currentCost, currentNode = heappop(min_heap)
-                if currentNode in VisitedNodes:
-                    continue #checks if currentNode is already visited, if it is then it skips the iteration
+        return Car_Profile.a * (free_term - (s_star / gap) ** 2)
+        '''
+        the comfortable acc of the driver
+        from the free road acc the interaction term is subtracted to get the resulting acc
+        square to mimic the human scaling
+        '''
 
-                VisitedNodes.append(currentNode)
+    def compute_acceleration(self, limit_kmh, gap=None, leader_v=0.0):
+        #this function only decides but doesnt change anything
+        v0 = self.desired_speed(limit_kmh)
+        a = self.IDM_acceleration(v0, gap, leader_v)
+        a = max(-self.max_brake, a)     #apply braking limit
+        return a
 
-                if currentNode == destination:
-                    #if the destination is reached, breaks the loop
-                    break
-                else:
-                    for j in graph[currentNode]:
-                        if j not in VisitedNodes:
-                            roadName = (graph[currentNode][j])
-                            dist = ActiveRoadsList[roadName].lenght
-                            cost = currentCost + dist
-                            if cost < NodeDist[j]['cost']:
-                                NodeDist[j]['cost'] = cost #reassigns when the cost is lower
-                                NodeDist[j]['pred'] = currentNode
-                                heappush(min_heap, (NodeDist[j]['cost'], j)) #thsi creates a tuple type datatype list with the min distances adn their respective nodes
-            path = []
-            foundPred = NodeDist[destination]['pred']
-            while foundPred != start:
-                path.insert(0, foundPred)
-                foundPred = NodeDist[foundPred]['pred']
-            path.insert(0, start)
-            path.append(destination)
+    def apply(self, a, dt):
+        #moves the cars
+        new_v = max(0.0, self.v + a * dt)
+        self.x += (self.v + new_v) / 2 * dt
+        self.a = (new_v - self.v) / dt
+        self.v = new_v
 
-            return path
-        except:
-            return None
+    def step(self, dt, limit_kmh, gap=None, leader_v=0.0):
+        self.apply(self.compute_acceleration(limit_kmh, gap, leader_v), dt)
 
-    def roadPath(self, graph):
-        #list of all the roadIds the car needs to travel
-        route = self.route
-        transition = []
-        for i in range(len(route)-1):
-            roadID = graph[route[i]].get(route[i+1])
-            if roadID is None:
-                return None
-            transition.append(roadID)
-        return transition
-    # def compulsoryBraking(self):
+    def refresh_turn(self, roads):
+        nextID = self.next_road_id
+        self.next_turn = None if nextID is None else turn_kind(roads[self.road_id], roads[nextID])
 
-    def turn(self):
-        roadRoute = (self.roadRoute)
-        roadID = self.current_road
-        roadLen = ActiveRoadsList[roadID].lenght
-        
-        if roadID == self.destinationList[1] and self.X_position >= self.destinationList[2] - 5:
-            if self in ActiveCarsNow:
-                print("deleting")
-                ActiveCarsNow.remove(self)
+    def update_route(self, roads):
+        #roads is ActiveRoadList
+        #either completes the trip or gets onto the next road
+
+        #if reached the destination
+        if (self.road_id == self.dest_road 
+                and self.dest_x is not None
+                    and self.x >= self.dest_x):
+            self.finished = True
             return
 
+        while self.x >= roads[self.road_id].lenght:
+            self.x -= roads[self.road_id].lenght
+            if self.route_index + 1 >= len(self.route):
+                self.finished = True
+                return
+            turn = self.next_turn
+            self.route_index += 1
+            self.history.clear() #clears the observations for the car for the previous road
+            self.lane = entry_lane(turn, self.lane, int(roads[self.road_id].lanes))
+            self.refresh_turn(roads)
 
-        elif self.X_position >= roadLen - 5:
-            currentIndex = roadRoute.index(roadID)            
-            if currentIndex+1 < len(roadRoute):
-                next_road = roadRoute[currentIndex+1]
-                overshoot = max(0.0, self.X_position - roadLen)
-                self.current_road = next_road
-                self.X_position = overshoot
-                self.lane_No = random.randint(0, int(ActiveRoadsList[next_road].lanes)-1)
-                print("Turning")
-            else: 
-                if self in ActiveCarsNow:
-                    ActiveCarsNow.remove(self)
-            
+    def observe(self, t, gap, leader_v):
+        self.history.append((t, gap, leader_v))
+        cutoff = t - self.reaction_time
 
-        # elif abs(self.X_position - roadRoute.get(roadID)) < 10:
-        #             # car slows down
-        #             print("SLOW")
+        while len(self.history) > 1 and self.history[1][0] <= cutoff:
+            self.history.popleft()
+
+    def perceived(self):
+        #reaction of driver based on observation from reaction time
+        _, gap, leader_v = self.history[0]
+        return gap, leader_v
+    

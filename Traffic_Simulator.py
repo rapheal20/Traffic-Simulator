@@ -1,13 +1,11 @@
 import pygame
 import numpy as np
 
-
 from Simulation_Helpers import *
-from Active_Lists.ActiveList import ActiveNodesDict, NodesforRoad, ActiveRoadsList, ActiveCarsNow
+from Active_Lists.ActiveList import ActiveNodes, NodesforRoad, ActiveRoads, ActiveCarsNow, ActiveSignals
 from Object_Classes.Router import Router
-from Object_Classes.TrafficLights import ActiveSignals, build_signals
-from Object_Classes.turn import build_turn_table, TURN_TABLE
-from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ring_points, ARCS
+from Object_Classes.turn import build_turn_table
+from Object_Classes.roundabouts import ring_pose, ring_points, ARCS
 
 #SCREEN CONSTANTS
 SCREEN_HEIGHT = 1000
@@ -37,11 +35,12 @@ mapSaved = False
 # coordinates, radius = (40.7580, -73.9855), 400
 coordinates, radius = (52,-0.7), 800
 
-scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad)
-print("roundabouts found:", len({id(a.center) for a in ARCS.values()}))
-router = Router(ActiveRoadsList)
-build_turn_table(ActiveRoadsList)
-print(len(TURN_TABLE))
+scale, AvailableLocations = Initialize_Map(coordinates, radius, ActiveNodes, NodesforRoad)
+print(f"Total Road Segments: {len(ActiveRoads)}")
+print(f"Total Nodes: {len(ActiveNodes)}")
+print("Roundabouts found:", len({id(a.center) for a in ARCS.values()}))
+router = Router(ActiveRoads)
+build_turn_table(ActiveRoads)
 
 # sys.exit()
 sim_time = 0.0
@@ -51,7 +50,7 @@ SIM_SPEED = 5.0
 def draw_ring_roads():
     dash_w = max(1, int(DASHES_WIDTH * scale))
     for roadID, arc in ARCS.items():
-        road = ActiveRoadsList[roadID]
+        road = ActiveRoads[roadID]
         half = carriageway_width_m(road.lanes) / 2
         x = np.linspace(0.0, arc.length, max(3, int(arc.length / arc.radius / 0.12) + 2))
         # arc.length / arc.radius gies the sweep angle in rad, divide it by 0.12, so point at every 7 deg
@@ -85,7 +84,7 @@ def draw_ring_roads():
         #round about only gets 1 central grass island
         for arc in {id(a.center): a for a in ARCS.values()}.values():
             w = max(
-            carriageway_width_m(ActiveRoadsList[roadID].lanes) / 2
+            carriageway_width_m(ActiveRoads[roadID].lanes) / 2
             for r_ID, a in ARCS.items()
             if a.center is arc.center
             )
@@ -144,7 +143,7 @@ while running:
 
     #Initializing cars
     while len(ActiveCarsNow) != 100:
-        spawner(router, ActiveRoadsList, AvailableLocations)
+        spawner(router, ActiveRoads, AvailableLocations)
 
     frame_time = clock.tick(60) / 1000.0
     accumulator += min(frame_time, 0.25) * SIM_SPEED
@@ -172,7 +171,7 @@ while running:
 
     drawGrid()
 
-    for roadID, roadData in ActiveRoadsList.items():
+    for roadID, roadData in ActiveRoads.items():
         if roadID in ARCS:
             continue
 
@@ -203,8 +202,8 @@ while running:
             halfWidth = roadWidth/2
 
 
-            nodeBufferPX1 = (ActiveNodesDict[roadData.StartNode].MaxLanes * LANE_WIDTH * scale)/2 
-            nodeBufferPX2 = (ActiveNodesDict[roadData.EndNode].MaxLanes * LANE_WIDTH * scale)/2 
+            nodeBufferPX1 = (ActiveNodes[roadData.StartNode].MaxLanes * LANE_WIDTH * scale)/2 
+            nodeBufferPX2 = (ActiveNodes[roadData.EndNode].MaxLanes * LANE_WIDTH * scale)/2 
             #get the node obj from the road list and find its maxlanes and cuts the road only that much
 
             #multiplying the UnitVector gives us a new arrow with that length
@@ -257,7 +256,7 @@ while running:
 
     draw_ring_roads()
 
-    for nodeID, nodeData in ActiveNodesDict.items():
+    for nodeID, nodeData in ActiveNodes.items():
         nodeType = nodeData.Type
         # if nodeType == 'traffic_signals':         
         nodePos = np.array(nodeData.Coordinates, dtype=float)
@@ -265,8 +264,8 @@ while running:
         halfnodeDim_M = (nodeData.MaxLanes * LANE_WIDTH + (nodeData.MaxLanes-1) * DASHES_WIDTH)/2
         halfnodeDim_PX = halfnodeDim_M * scale
 
-        normal = ActiveRoadsList[nodeData.MainRoad].NormalVector
-        tangent = ActiveRoadsList[nodeData.MainRoad].UnitVector
+        normal = ActiveRoads[nodeData.MainRoad].NormalVector
+        tangent = ActiveRoads[nodeData.MainRoad].UnitVector
 
         NCorner1 = screenPos + (tangent * halfnodeDim_PX) + (normal * halfnodeDim_PX)
         NCorner2 = screenPos + (tangent * halfnodeDim_PX) - (normal * halfnodeDim_PX)
@@ -277,22 +276,16 @@ while running:
 
         pygame.draw.polygon(screen, (25,25,25), points=NodeCoordinates)
 
-        # elif nodeType == 'roundabout':
-            # print("roundabout")
-    #     else:
-
-    # print(ActiveCarsNow)
-    
     LIGHT_COL = {'green' : (0,200,0), "yellow" : (240, 190, 0), 'red':(220,0,0)}
 
-    for roadID, roadData in ActiveRoadsList.items():
+    for roadID, roadData in ActiveRoads.items():
         light = ActiveSignals.get(roadData.EndNode)
         if light is None or roadData.lenght < 10:
             continue
         unitVec = roadData.UnitVector
         normal = roadData.NormalVector
         endCord = roadData.coordinates[1]
-        buffer = ActiveNodesDict[roadData.EndNode].MaxLanes * LANE_WIDTH / 2
+        buffer = ActiveNodes[roadData.EndNode].MaxLanes * LANE_WIDTH / 2
         half = carriageway_width_m(roadData.lanes) / 2
         centre = endCord - unitVec * buffer + normal * carriageway_shift_m(roadData)
         a = (centre + normal * half) * scale + cameraOffset
@@ -303,10 +296,10 @@ while running:
 
     for carObj in ActiveCarsNow:
         carRoad = carObj.road_id
-        if not carRoad or carRoad not in ActiveRoadsList:
+        if not carRoad or carRoad not in ActiveRoads:
             continue
 
-        roadData = ActiveRoadsList[carRoad]
+        roadData = ActiveRoads[carRoad]
         p1World = (roadData.coordinates)[0]
 
         unitVector = roadData.UnitVector

@@ -3,7 +3,6 @@ from collections import namedtuple
 import math
 import networkx as nx
 
-J = np.array([[0.0, -1.0], [1.0, 0.0]])     #for perpendiculars
 
 ARCS = {}   #dictionary mapping a roundabout road ID to its Arc tuple
 

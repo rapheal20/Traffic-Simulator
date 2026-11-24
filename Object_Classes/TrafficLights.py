@@ -1,11 +1,10 @@
 import numpy as np
-
+from Active_Lists.ActiveList import ActiveSignals
 
 GREEN, YELLOW, ALL_RED = 20.0, 3.0, 2.0
 SLOT = GREEN + YELLOW + ALL_RED     #25s
 CYCLE = 2 * SLOT    #50s
 
-ActiveSignals = {}  #nodeID : TrafficLight
 
 class TrafficLight:
     def __init__(self, node_id, phase_of, offset= 0.0):
@@ -26,7 +25,7 @@ class TrafficLight:
         return 'red'
 
 def build_signals(roads, nodes, rng):
-    '''roads = ActiveROadsList, nodes = ActiveNodesDict'''
+    '''roads = ActiveRoads, nodes = ActiveNodes'''
     incoming = {}   #groups the roads by the nodes they meet at
 
     for road in roads.values():

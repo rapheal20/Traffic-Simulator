@@ -1,4 +1,4 @@
-from Active_Lists.ActiveList import ActiveRoadsList, ActiveNodesDict, ActiveNodesSet
+from Active_Lists.ActiveList import ActiveRoads
 
 class roads():
     def __init__(self, roadID, coordinates, roadLength, lanes, oneway, speedLimit, unitVec, normal, startNode, endNode):
@@ -14,6 +14,6 @@ class roads():
         self.EndNode = endNode
         self.cars_data = [[] for _ in range(self.lanes)]
 
-        ActiveRoadsList[self.road_id] = self
+        ActiveRoads[self.road_id] = self
 
     

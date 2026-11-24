@@ -264,11 +264,11 @@ Recalculate route with Dijkstra
     <!-- Create project structure -->
     <!-- Create main simulation loop -->
     <!-- Define simulation timestep -->
-2. Core Data Structures
+<!-- 2. Core Data Structures -->
     <!-- Design Car -->
     <!-- Design Road -->
     <!-- Design Node -->
-    Design TrafficLight
+    <!-- Design TrafficLight -->
     <!-- Design Simulation -->
     <!-- Design road network structure -->
     <!-- Define relationships between objects -->
@@ -306,13 +306,13 @@ Recalculate route with Dijkstra
     <!-- Implement nervous drivers -->
     <!-- Implement driver-specific acceleration -->
     <!-- Implement driver-specific gap acceptance -->
-8. Traffic Lights
-    Create traffic-light system
-    Implement light cycles
-    Implement traffic-light detection
-    Calculate stopping/acceleration requirements
-    Integrate lights with car behaviour
-9. Road Transitions
+<!-- 8. Traffic Lights -->
+    <!-- Create traffic-light system -->
+    <!-- Implement light cycles -->
+    <!-- Implement traffic-light detection -->
+    <!-- Calculate stopping/acceleration requirements -->
+    <!-- Integrate lights with car behaviour -->
+<!-- 9. Road Transitions -->
     <!-- Detect road endings -->
     <!-- Determine next road -->
     <!-- Move cars between roads -->
@@ -393,7 +393,7 @@ Recalculate route with Dijkstra
     <!-- Render lanes -->
     <!-- Render intersections -->
     <!-- Render cars -->
-    Render traffic lights
+    <!-- Render traffic lights -->
     Implement camera
     Implement zoom/pan
     Implement simulation controls
