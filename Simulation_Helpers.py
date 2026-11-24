@@ -20,8 +20,6 @@ from Object_Classes.IDM_Car import Car
 from Object_Classes.turn import lane_is_clear, allowed_lanes, lane_gap, entry_lane
 from Object_Classes.roundabouts import build_ring_arcs, ring_pose, ARCS, YIELD_MAP, build_yield_map
 
-A_LAT = 2.0 #acc drivers accept on a curve
-
 # CONSTANTS
 SCALE_PER_M = 5
 LANE_WIDTH = 3.6 #in meters
@@ -30,15 +28,6 @@ DASH_length = 3
 GAP_length = 3
 
 DT = 0.1
-#LANE CHANGING CONST.
-LANE_SAFE_BRAKE = 4.0   #max braking to impose on new follower
-LANE_GAIN = 0.3     #minimum benefit to change lane
-LANE_COOLDOWN = 5.0
-
-#LANE CHANGE FOR TURN CONST.
-TURN_ZONE = 150.0   #distance where laen change begins for turn
-TURN_WEIGHT = 3.0   #benefot of being 1 lane closer
-LANE_COOLDOWN_TURN = 1.5    #shorter cooldown for turn lanechange
 
 carWidth = 2
 carlength = 4.5
@@ -46,14 +35,10 @@ DRIVE_SIDE = +1 #left hand traffic
 
 #Roundabout Giveway const.
 YIELD_LOOK = 80
-T_CRIT = 3.5
-T_FOLLOW = 1.5
 V_MIN = 1.0
-
 #Box Blocking Const.
 BOX_LOOK = 60.0 #from how far is the exit space checked
-BOX_MARGIN = 2.0    #extra space beyond the cars own lengh
-BOX_PATIENCE = 12.0     #seconds a car waits before entering anyway
+ 
 
 
 DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
@@ -204,8 +189,6 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
                 _, UnitVector, normal = ring_pose(arc, 0.0, 0.0)
 
             Speed_Limit_KMH = findSpeedLimit(data)
-            if arc is not None:
-                Speed_Limit_KMH = min(Speed_Limit_KMH, max(15, round(3.6 * math.sqrt(A_LAT * arc.radius))))
 
             oneway = data.get('oneway', True)
 
@@ -249,9 +232,10 @@ def Initialize_Map(coordinates, radius, ActiveNodesDict, NodesforRoad):
                 normal=normal,
                 startNode=u,
                 endNode=v
-            )
+            ) 
 
             newRoad.is_ring = arc is not None
+            newRoad.curve_radius = arc.radius if arc is not None else None
             if arc is not None:
                 ARCS[uniqueID] = arc
 
@@ -472,7 +456,7 @@ def signal_leader(car, road, t):
     dist = getattr(road, 'stop_x', road.lenght) - car.x #getattr reads by name and falls back to a default
     if dist < 0.5:  #if its past this line then it just goes along to clear the juction
         return None
-    if state == "yellow" and car.v **2/(2 * car.profile.b) > dist:  #if the car can stop comfortably then it stops else it goes through
+    if state == "yellow" and car.v **2/(2 * car.profile.yellow_decel) > dist:  #if the car can stop comfortably then it stops else it goes through
         # d = (v^2 / 2b)    uses kinematics formual to find the decelration needed
         return None
     return dist, 0.0
@@ -507,13 +491,20 @@ def yield_leader(car, road, t):
     car.yield_wait = 0.0
     return None
 
+def limit_for(car, road):
+    #speed limit this driver respects here
+    limit = road.speed_limit
+    if road.curve_radius:
+        limit = min(limit, 3.6 + math.sqrt(car.profile.a_lat * road.curve_radius))
+    return limit
+
 def approach_limit(car, road):
     #speed form which car can still slow down comfortably
-    limit = road.speed_limit
+    limit = limit_for(car, road)
     nextID = car.next_road_id
     if nextID is None:
         return limit
-    nxt = ActiveRoadsList[nextID].speed_limit
+    nxt = limit_for(car, ActiveRoadsList[nextID])
     if nxt >= limit:
         return limit
     d = max(0.0, road.stop_x - car.x)
@@ -533,12 +524,12 @@ def box_leader(car, road, t):
     nextRoad = ActiveRoadsList[NextID]
     queue = nextRoad.cars_data[entry_lane(car.next_turn, car.lane, int(nextRoad.lanes))]
     free = (queue[-1].x - queue[-1].length) if queue else float('inf')
-    if free >= car.length + BOX_MARGIN:
+    if free >= car.length + car.profile.box_patience:
         car.box_wait = 0.0
         return None
     if car.v < 0.5:
         car.box_wait += DT
-        if car.box_wait > BOX_PATIENCE:
+        if car.box_wait > car.profile.box_patience:
             return None
     return distance, 0.0
 
@@ -618,10 +609,10 @@ def turn_urgency(car, road):
     if distance_to_turn < 0.0:
         distance_to_turn = 0.0
 
-    if distance_to_turn >= TURN_ZONE:
+    if distance_to_turn >= car.profile.turn_zone:
         return 0.0
 
-    urgency = 1.0 - (distance_to_turn / TURN_ZONE)
+    urgency = 1.0 - (distance_to_turn / car.profile.turn_zone)
     #as car gets closer inside TURN_ZONE, urgency rises
     return urgency
 

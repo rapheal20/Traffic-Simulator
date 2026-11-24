@@ -14,19 +14,19 @@ class DriverProfile:
     reaction: float
     #========LANE CHANGING
     politeness: float
-    lane_gain: float
+    lane_gain: float        #minimum benefit to change lane
     lane_cooldown: float
-    safe_brake: float
+    safe_brake: float       #max braking to impose on new follower while lane change
     turn_zone: float
     turn_weight: float
     #=========JUNCTIONS
     t_crit: float
     t_follow: float
     yield_patience: float
-    box_margin: float
-    box_patience: float
+    box_margin: float       #extra space beyond the cars own lengh
+    box_patience: float     #seconds a car waits before entering anyway
     yellow_decel: float
-    a_lat: float
+    a_lat: float        #acc drivers accept on a curve
 
 PROFILES = {
      #aggressive
