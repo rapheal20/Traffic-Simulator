@@ -46,7 +46,13 @@ PROFILES = {
                      #LANE CHANGE
                      politeness=0.5, lane_gain=0.60, lane_cooldown=8.0, safe_brake=3.0, turn_zone=220.0, turn_weight=4.0,
                      #JUNCTIONS
-                     t_crit=4.5, t_follow=2.2, yield_patience=25.0, box_margin=3.5, box_patience=20.0, yellow_decel=3.5, a_lat=1.5)   
+                     t_crit=4.5, t_follow=2.2, yield_patience=25.0, box_margin=3.5, box_patience=20.0, yellow_decel=3.5, a_lat=1.5),   
+    #emergency
+    3: dict(a=4.0, b=4.0, T=0.8, s0=1.2, speed_factor=1.35,  reaction=0.30,
+                     #LANE CHANGE
+                     politeness=0.0, lane_gain=0.10, lane_cooldown=2.0, safe_brake=6.0, turn_zone=150.0, turn_weight=3.0,
+                     #JUNCTIONS
+                     t_crit=1.5, t_follow=0.4, yield_patience=4.0, box_margin=0.0, box_patience=2.0, yellow_decel=2.0, a_lat=3.5)
 }
 
 SPREAD ={'speed_factor':0.05, 'reaction':0.30, 'politeness':0.50, 'lane_gain':0.30, 'turn_zone':0.25}
@@ -64,14 +70,20 @@ def make_profiles(style, rng):
 class Car:
     def __init__(self, car_id, length, route, max_brake=8.0, rng=None,
                  lane=0, start_x=0.0, start_speed_kmh=0.0,
-                 dest_road=None, dest_x=None):
+                 dest_road=None, dest_x=None, emergency=False):
             
         self.id = car_id
         self.length = length #m
         self.rng = rng or random.Random()   #this creates a random seed, generates the randomness
 
         #fixed properties
-        self.style = self.rng.randint(0, 2)
+        self.is_emergency = emergency
+        self.style = 3 if emergency else self.rng.randint(0, 2)
+
+        self.ev_gap = None      #m to an emergency vehicle behind or None
+        self.passing = False    #emergency vehicles drving past the car
+        self.side_shift = 0.0   #sideway drawing offset in m, eased each tick
+
         self.max_speed = (self.rng.choice([120, 130, 140, 150, 160, 170, 180])) / 3.6 #m/s
         self.max_brake = max_brake 
 

@@ -38,7 +38,17 @@ YIELD_LOOK = 80
 V_MIN = 1.0
 #Box Blocking Const.
 BOX_LOOK = 60.0 #from how far is the exit space checked
- 
+
+#EMERGENCY VEHICLE CONST.
+EMERGENCY_SHARE = 0.05      #fraction of spawned cars that are EV
+EV_ALERT = 80.0         #m ahead of an EV where cars start pulling over
+EV_CRAWL_KMH = 10.0     #speed a car slows to when the EV reaches it
+EV_CAP_SLOPE = 0.5      #km/h of allowed speed per m of gap to the EV
+EV_JUNCTION_KMH = 30.0      #speed an EV takes through a red or yellow light
+PULL_SHIFT_M = 1.2      #sideways shift of a car pulling over
+EV_SHIFT_M = 0.8        #sidways shift of an EV while passing towards the centre line
+
+
 ROTATION_MATRICS = np.array([[0,-1],[1,0]]) #2D vector whcih roates any value by 90 degrees counterclockwise
 
 DEFAULT_LIMITS = {   # km/h, by OSM 'highway' tag
@@ -51,9 +61,9 @@ def resource_path(relative_path):
   return os.path.join(base_path, relative_path)
 
 def Make_Map(coordinates, radius):
-    graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
+    # graph = ox.graph_from_point(coordinates, dist=radius, network_type='drive') # takes the center from the tuple and then takes a curcle of raduis 400m
     
-    # graph = ox.load_graphml(resource_path('nyc_map.graphml')) #do avoid a crash in exe
+    graph = ox.load_graphml(resource_path('MISC\\nyc_map.graphml')) #do avoid a crash in exe
     projectedGraph = ox.project_graph(graph) #converts the graph form latitide and longitude to XY coordiantes(needed for pygames)
     
     
@@ -297,9 +307,14 @@ def SortInLanes(ActiveCarsNow):
             #reverse so that index 0 is the car furthest away
 
 def FindLeader(car, lane, i, road):
-    #same road same lane
-    if i > 0:
-        lead = lane[i - 1]
+    #in same road same lane
+    j = i - 1
+    if car.is_emergency:    #EV passes the pulle dover cars
+        while j >= 0 and lane[j].ev_gap is not None:
+            j -= 1
+
+    if j >= 0:
+        lead = lane[j]
         gap = (lead.x - lead.length) - car.x
         return gap, lead.v
 
@@ -311,10 +326,14 @@ def FindLeader(car, lane, i, road):
     next_Road = ActiveRoads[next_id]
     next_Lane = entry_lane(car.next_turn, car.lane, int(next_Road.lanes))
     cars_There = next_Road.cars_data[next_Lane]
-    if not cars_There:
+    k = len(cars_There) - 1
+    if car.is_emergency:
+        while k >= 0 and cars_There[k].ev_gap is not None:
+            k -= 1
+    if k < 0:
         return None, 0.0
 
-    lead = cars_There[-1]
+    lead = cars_There[k]
     gap = (road.lenght - car.x) + (lead.x - lead.length)
     return gap, lead.v
     
@@ -413,6 +432,7 @@ def simulation_step(cars, dt, t):
         for c in movers:
             if c.lane_cooldown == 0.0:
                 try_lane_change(c, road)
+    mark_pull_overs(cars)
     #deciding phase
     decisions = []
     for road in ActiveRoads.values():
@@ -431,7 +451,7 @@ def simulation_step(cars, dt, t):
                 if sig is not None and (per_gap is None or sig[0] < per_gap):
                     per_gap, per_leader_v = sig
 
-                decisions.append((carOBJ, carOBJ.compute_acceleration(approach_limit(carOBJ, road), per_gap, per_leader_v)))
+                decisions.append((carOBJ, carOBJ.compute_acceleration(approach_limit(carOBJ, road, t), per_gap, per_leader_v)))
 
     for car, a in decisions:
         prev_x = car.x
@@ -439,13 +459,24 @@ def simulation_step(cars, dt, t):
         road  = ActiveRoads[car.road_id]
         light = ActiveSignals.get(road.EndNode)
         stop = getattr(road, "stop_x", None)
-        if light and stop and prev_x < stop <= car.x and light.state(road.road_id, t) == "red":
+        if light and stop and prev_x < stop <= car.x and light.state(road.road_id, t) == "red" and not car.is_emergency:
             print("RED RUN", car.id, f"{car.v*3.6:.0f} km/h")
         car.update_route(ActiveRoads)
 
+    for c in cars:  #slides cars sidways in a third of a second
+        target = (DRIVE_SIDE * PULL_SHIFT_M if c.ev_gap is not None
+                    else -DRIVE_SIDE * EV_SHIFT_M if c.passing else 0.0)
+        c.side_shift += (target - c.side_shift) * min(1.0, 3.0 * dt)
+
+
     cars[:] = [c for c in cars if not c.finished] #removes any cars that is finished
 
+'''TRAFFIC SIGNALS'''
 def signal_leader(car, road, t):
+    #EV follow no signals
+    if car.is_emergency:
+        return None
+    
     light = ActiveSignals.get(road.EndNode)
     if light is None:
         return None #checks for light at end, if no light then dosnt stop
@@ -462,6 +493,11 @@ def signal_leader(car, road, t):
 
 def yield_leader(car, road, t):
     #this is for the giveway line at roundabout entry, acts like a red light if roundabout is busy
+    
+    #EV follow no signals
+    if car.is_emergency:
+        return None
+        
     feeders = YIELD_MAP.get(road.road_id)
     if not feeders:
         return None
@@ -497,9 +533,19 @@ def limit_for(car, road):
         limit = min(limit, 3.6 + math.sqrt(car.profile.a_lat * road.curve_radius))
     return limit
 
-def approach_limit(car, road):
+def approach_limit(car, road, t):
     #speed form which car can still slow down comfortably
     limit = limit_for(car, road)
+
+    if car.ev_gap is not None:      #ev coming from behind so slows down smoothly
+        limit = min(limit, EV_CRAWL_KMH + EV_CAP_SLOPE * car.ev_gap)
+
+    if car.is_emergency:
+        light = ActiveSignals.get(road.EndNode)
+        if light is not None and light.state(road.road_id, t) != 'green':
+            d = max(0.0, road.stop_x - car.x)
+            limit = min(limit, 3.6 * math.sqrt((EV_JUNCTION_KMH / 3.6) ** 2 + 2 * car.profile.b * d))
+    
     nextID = car.next_road_id
     if nextID is None:
         return limit
@@ -511,6 +557,11 @@ def approach_limit(car, road):
 
 def box_leader(car, road, t):
     #stop at the stop line if there is o room the next road
+    
+    #EV follow no giveway lines
+    if car.is_emergency:
+        return None
+        
     if road.is_ring:
         return None
     NextID = car.next_road_id
@@ -541,7 +592,6 @@ def cars_stuck_in_junction():
             n += 1
     return n
 
-    
 def carriageway_width_m(lanes):
     return lanes * LANE_WIDTH + (lanes - 1) * DASHES_WIDTH
 
@@ -571,6 +621,7 @@ def spawner(router, ActiveRoads, AvailableLocations):
 
     destinationData = [ActiveRoads[destination].EndNode,destination, random.randint(6,round(ActiveRoads[destination].lenght))]
 
+    emergency = random.random() < EMERGENCY_SHARE
     spawn_car(
             router=router,
             cars=ActiveCarsNow,
@@ -581,18 +632,20 @@ def spawner(router, ActiveRoads, AvailableLocations):
             speed_kmh=30,
             dest_road=destinationData[1],
             dest_x=destinationData[2],
-            length=4.5,
-            rng= random.Random()
+            length=6.0 if emergency else 4.5,
+            rng= random.Random(),
+            emergency=emergency
             )
 
 def spawn_car(router, cars, car_id, road_id, x, lane, speed_kmh,
-                dest_road, dest_x, length, rng):
+                dest_road, dest_x, length, rng, emergency=False):
     pref = rng.randint(0, 1)
     route = router.route(road_id, dest_road, pref)
     if route is None:
         return None
     car = Car(car_id, length, route, rng=rng, lane=lane, start_x=x,
-                start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x)
+                start_speed_kmh=speed_kmh, dest_road=dest_road, dest_x=dest_x,
+                emergency=emergency)
     cars.append(car)
     return car
 
@@ -616,6 +669,32 @@ def turn_urgency(car, road):
     return urgency
 
 
+'''FOR EMERGENCY CARS'''
+def _mark(car, gap):
+    # marks the cars which need to make way
+    if not car.is_emergency:
+        gap1 = max(gap, 0.0)
+        car.ev_gap = gap1 if car.ev_gap is None else min(car.ev_gap, gap1)
 
+def mark_pull_overs(cars):
+    #cars ahead of an EV
+    for c in cars:
+        c.ev_gap = None
+    for road in ActiveRoads.values():
+        for lane in road.cars_data:
+            for i, ev in enumerate(lane):
+                if not ev.is_emergency:
+                    continue
+                for ahead in lane[:i]:
+                    g = (ahead.x - ahead.length) - ev.x
+                    if g <= EV_ALERT:
+                        _mark(ahead, g)
 
+                nextID = ev.next_road_id
+                if nextID is not None and road.lenght - ev.x < EV_ALERT:
+                    nextRD = ActiveRoads[nextID]
+                    for ahead in nextRD.cars_data[entry_lane(ev.next_turn, ev.lane, int(nextRD.lanes))]:
+                        g = (road.lenght - ev.x) + (ahead.x - ahead.length)
+                        if g <= EV_ALERT:
+                            _mark(ahead, g)
 

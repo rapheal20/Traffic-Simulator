@@ -311,6 +311,7 @@ while running:
         LaneNo = roadData.lanes
         # LaneOffset = (carObj.lane - (LaneNo - 1)/2.0) * LANE_WIDTH
         LaneOffset = lane_center_offset_m(roadData, carObj.lane)
+        LaneOffset += carObj.side_shift
         CarCenterWorld = carWorldPos + (normal * LaneOffset)
         if carRoad in ARCS:
             CarCenterWorld, unitVector, normal = ring_pose(ARCS[carRoad], carObj.x, LaneOffset)
@@ -338,6 +339,10 @@ while running:
         colour = TURN_COL[carObj.next_turn]
         if carObj.yield_wait > 0:
             colour = (240, 190,0)
+        if carObj.ev_gap is not None:
+            colour = (150, 200, 120)
+        if carObj.is_emergency: #flashing red and blue
+            colour = (220, 30, 30) if int(sim_time * 4) % 2 else (40, 90, 255)
         # (255,0,0)
         pygame.draw.polygon(surface=screen, color=colour, points=screenCorners)
 
